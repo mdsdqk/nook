@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "noEmit": true,
+    "paths": {
+      "@nook/domain": ["../packages/domain/src/index.ts"]
+    }
+  },
+  "include": ["./**/*"],
+  "exclude": ["node_modules"]
+}
