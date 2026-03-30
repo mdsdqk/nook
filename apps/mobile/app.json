@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Nook",
+    "slug": "nook",
+    "version": "1.0.0",
+    "scheme": "nook",
+    "platforms": ["ios", "android"],
+    "newArchEnabled": true,
+    "plugins": ["expo-router"]
+  }
+}
