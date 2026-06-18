@@ -2,6 +2,7 @@ export type AccountType =
   | "asset"
   | "asset.cash"
   | "asset.bank"
+  | "asset.wallet"
   | "asset.investment"
   | "liability"
   | "liability.credit_card"
@@ -24,6 +25,12 @@ export const ACCOUNT_TYPE_REGISTRY: Record<AccountType, AccountTypeMeta> = {
   },
   "asset.bank": {
     label: "Bank",
+    parent: "asset",
+    isAsset: true,
+    isLiability: false,
+  },
+  "asset.wallet": {
+    label: "Wallet",
     parent: "asset",
     isAsset: true,
     isLiability: false,
