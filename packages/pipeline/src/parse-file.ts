@@ -82,7 +82,7 @@ export async function parseFile(path: string): Promise<ParseResult> {
       errors: [
         {
           code: ErrorCode.UnsupportedStatementVersion,
-          message: `No parser for ${detection.bank} ${detection.accountType}`,
+          message: `No parser for ${detection.bank} ${detection.variant} ${detection.accountType} ${detection.formatVersion}`,
         },
       ],
     };

@@ -21,6 +21,16 @@ describe("parseIndianDate", () => {
   it("throws on invalid format", () => {
     expect(() => parseIndianDate("2026-01-01")).toThrow();
   });
+
+  it("parses DD MMM YYYY", () => {
+    expect(parseIndianDate("27 Apr 2026")).toBe("2026-04-27");
+    expect(parseIndianDate("1 Jul 2026")).toBe("2026-07-01");
+    expect(parseIndianDate("26 Jul 2026")).toBe("2026-07-26");
+  });
+
+  it("throws on unknown month abbreviation", () => {
+    expect(() => parseIndianDate("01 Foo 2026")).toThrow();
+  });
 });
 
 describe("toISODate", () => {
@@ -30,5 +40,9 @@ describe("toISODate", () => {
 
   it("converts Indian dates", () => {
     expect(toISODate("01/06/2026")).toBe("2026-06-01");
+  });
+
+  it("converts textual Indian dates", () => {
+    expect(toISODate("27 Apr 2026")).toBe("2026-04-27");
   });
 });
