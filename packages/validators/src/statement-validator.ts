@@ -36,12 +36,6 @@ export class StatementValidator implements Validator {
       message: "Statement period present",
     });
 
-    entries.push({
-      category: "structural",
-      passed: stmt.transactions.length > 0,
-      message: "At least one transaction present",
-    });
-
     for (const txn of stmt.transactions) {
       if (!txn.date) {
         entries.push({

@@ -7,9 +7,17 @@ const HDFC_PDF = resolve(
   __dirname,
   "../../../../sample_data/savings/hdfc-savings.pdf",
 );
-const EXPECTED_JSON = resolve(
+const HDFC_EXPECTED = resolve(
   __dirname,
   "../../../../fixtures/hdfc/savings/expected.json",
+);
+const INDIE_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/indusind-indie.pdf",
+);
+const INDIE_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/indusind/indie_savings/expected.json",
 );
 
 describe("parseFile", () => {
@@ -29,7 +37,28 @@ describe("parseFile", () => {
     expect(result.statement!.closingBalance).toBe(2159.41);
 
     // Match golden fixture (excluding source.path which differs)
-    const expected = JSON.parse(await readFile(EXPECTED_JSON, "utf-8"));
+    const expected = JSON.parse(await readFile(HDFC_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
+  it("parses IndusInd Indie savings PDF matching golden fixture", async () => {
+    const result = await parseFile(INDIE_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "INDUSIND",
+      accountType: "indie_savings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(8);
+    expect(result.statement!.openingBalance).toBe(300743.41);
+    expect(result.statement!.closingBalance).toBe(558275.69);
+
+    const expected = JSON.parse(await readFile(INDIE_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
     expect(result.statement).toEqual(expected.statement);
     expect(result.validation).toEqual(expected.validation);
@@ -41,7 +70,7 @@ describe("parseFile", () => {
     expect(result.errors[0]!.code).toBe("READ_ERROR");
   });
 
-  it("returns unknown bank for non-HDFC PDF", async () => {
+  it("returns unknown bank for unsupported PDF", async () => {
     const sbiPdf = resolve(
       __dirname,
       "../../../../sample_data/savings/sbi.pdf",

@@ -1,0 +1,131 @@
+{
+  "source": {
+    "path": "sample_data/savings/indusind-indie.pdf",
+    "contentHash": "d43520e98dd38c2fa942a1ccaa5137ddfe2a93174ad7b895ff875c60ea93dacf",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "INDUSIND",
+    "accountType": "indie_savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "INDUSIND",
+      "accountType": "indie_savings",
+      "accountNumber": "188088694386",
+      "statementPeriod": {
+        "from": "2026-04-27",
+        "to": "2026-07-27"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 300743.41,
+    "closingBalance": 558275.69,
+    "transactions": [
+      {
+        "date": "2026-04-28",
+        "narration": "VISA POS TXN AT IN/BOOKMYSHOW COM 12430",
+        "debit": 212.72,
+        "credit": null,
+        "balance": 300530.69,
+        "reference": "S36187473",
+        "sequence": 1
+      },
+      {
+        "date": "2026-05-01",
+        "narration": "UPI/612124483697/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "debit": null,
+        "credit": 50000,
+        "balance": 350530.69,
+        "reference": "S82086944",
+        "sequence": 2
+      },
+      {
+        "date": "2026-05-06",
+        "narration": "UPI/122677104030/CR/RUQA/HDFC/6968@okhdfcbank/UPI",
+        "debit": null,
+        "credit": 50000,
+        "balance": 400530.69,
+        "reference": "S53621865",
+        "sequence": 3
+      },
+      {
+        "date": "2026-05-27",
+        "narration": "UPI/651340067420/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "debit": null,
+        "credit": 50000,
+        "balance": 450530.69,
+        "reference": "S75487247",
+        "sequence": 4
+      },
+      {
+        "date": "2026-06-30",
+        "narration": "188088694386:Int.Pd:01-04-2026 to 30-06-2026",
+        "debit": null,
+        "credit": 2745,
+        "balance": 453275.69,
+        "reference": "S13502581",
+        "sequence": 5
+      },
+      {
+        "date": "2026-07-06",
+        "narration": "UPI/618734585830/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "debit": null,
+        "credit": 25000,
+        "balance": 478275.69,
+        "reference": "S3325205",
+        "sequence": 6
+      },
+      {
+        "date": "2026-07-07",
+        "narration": "UPI/655479090370/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "debit": null,
+        "credit": 30000,
+        "balance": 508275.69,
+        "reference": "S21686003",
+        "sequence": 7
+      },
+      {
+        "date": "2026-07-26",
+        "narration": "UPI/126914791355/CR/RUQA/HDFC/6968@okhdfcbank/UPI",
+        "debit": null,
+        "credit": 50000,
+        "balance": 558275.69,
+        "reference": "S19929989",
+        "sequence": 8
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}

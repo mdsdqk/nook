@@ -21,6 +21,31 @@ describe("BankDetector", () => {
     });
   });
 
+  it("detects IndusInd Indie savings", () => {
+    const doc = makeDoc(
+      "Account Statement\nINDIE SAVINGS ACCOUNT\nBranch IFSC Code: INDB0000008\nvisit us at www.indusind.com\nThis statement is downloaded from INDIE mobile application",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "INDUSIND",
+      accountType: "savings",
+      variant: "indie",
+      formatVersion: "v1",
+    });
+  });
+
+  it("does not detect IndusInd Indie from narration alone", () => {
+    const doc = makeDoc(
+      "HDFC BANK\nSAVINGS ACCOUNT\nStatement of account\nUPI to INDUSIND BANK via INDB0000008",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HDFC",
+      accountType: "savings",
+      formatVersion: "v1",
+    });
+  });
+
   it("does not detect HDFC from transaction mentions", () => {
     const doc = makeDoc(
       "AXIS BANK\nPaid v/HDFC BANK LTD\nStatement of some other bank\nSAVINGS",

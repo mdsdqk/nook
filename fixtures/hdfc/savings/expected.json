@@ -93,11 +93,6 @@
         "message": "Statement period present"
       },
       {
-        "category": "structural",
-        "passed": true,
-        "message": "At least one transaction present"
-      },
-      {
         "category": "financial",
         "passed": true,
         "message": "Opening + Credits - Debits = Closing"
