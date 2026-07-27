@@ -9,7 +9,9 @@
     "dev:convex": "turbo run dev --filter=@nook/convex",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "statement": "bun run apps/cli/src/index.ts",
+    "test": "turbo run test"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
