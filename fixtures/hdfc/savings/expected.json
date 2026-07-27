@@ -1,0 +1,118 @@
+{
+  "source": {
+    "path": "sample_data/savings/hdfc-savings.pdf",
+    "contentHash": "0961a755daa2dcd8c130c6882b5ce743cd71333a4b04babea15999f16aa618df",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "HDFC",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "HDFC",
+      "accountType": "savings",
+      "accountNumber": "50100684583830",
+      "statementPeriod": {
+        "from": "2026-06-01",
+        "to": "2026-06-30"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 27381.41,
+    "closingBalance": 2159.41,
+    "transactions": [
+      {
+        "date": "2026-06-17",
+        "narration": "JNS-PMSBY-26-27-00383361254-865_DAP",
+        "debit": 20,
+        "credit": null,
+        "balance": 27361.41,
+        "reference": "0000SBYNL1727176",
+        "sequence": 1
+      },
+      {
+        "date": "2026-06-17",
+        "narration": "JNS-PMJJBY-26-27-00383364603-037_DAP",
+        "debit": 436,
+        "credit": null,
+        "balance": 26925.41,
+        "reference": "0000JBYNL1727236",
+        "sequence": 2
+      },
+      {
+        "date": "2026-06-28",
+        "narration": "IBBILLPAYDR-HDFCDE-360886XXXX2149",
+        "debit": 25000,
+        "credit": null,
+        "balance": 1925.41,
+        "reference": "1782641582607715",
+        "sequence": 3
+      },
+      {
+        "date": "2026-06-28",
+        "narration": "UPI-MOHAMMEDSADIQ K-9632740312@YESCRED- UTIB0005157-654500284418-PAIDVIACRED",
+        "debit": null,
+        "credit": 40000,
+        "balance": 41925.41,
+        "reference": "0000654500284418",
+        "sequence": 4
+      },
+      {
+        "date": "2026-06-28",
+        "narration": "IBBILLPAYDR-HDFCDE-360886XXXX2149",
+        "debit": 40000,
+        "credit": null,
+        "balance": 1925.41,
+        "reference": "1782641941840584",
+        "sequence": 5
+      },
+      {
+        "date": "2026-07-01",
+        "narration": "INTERESTPAIDTILL30-JUN-2026",
+        "debit": null,
+        "credit": 234,
+        "balance": 2159.41,
+        "reference": "000000000000000",
+        "sequence": 6
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "At least one transaction present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}

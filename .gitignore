@@ -43,3 +43,8 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+#Local Dev Related
+sample_data/
+sample_data/*
+*_output*
