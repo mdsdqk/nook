@@ -1,0 +1,69 @@
+{
+  "source": {
+    "path": "sample_data/savings/dbs.pdf",
+    "contentHash": "01a1e51bfff584415d734b8910e41e1445b235c8ad390ce8c4bfd1719d07c9fd",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "DBS",
+    "variant": "digisavings",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "DBS",
+      "accountType": "digisavings",
+      "accountNumber": "8291010000030454",
+      "statementPeriod": {
+        "from": "2026-06-01",
+        "to": "2026-06-30"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 14708.57,
+    "closingBalance": 14800.57,
+    "transactions": [
+      {
+        "date": "2026-06-30",
+        "narration": "CREDIT INTEREST - Saving -8291010000030454",
+        "debit": null,
+        "credit": 92,
+        "balance": 14800.57,
+        "reference": "",
+        "sequence": 1
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}

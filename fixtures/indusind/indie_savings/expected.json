@@ -6,7 +6,8 @@
   },
   "detection": {
     "bank": "INDUSIND",
-    "accountType": "indie_savings",
+    "accountType": "savings",
+    "variant": "indie",
     "formatVersion": "v1"
   },
   "statement": {

@@ -17,6 +17,7 @@ describe("BankDetector", () => {
     expect(result).toEqual({
       bank: "HDFC",
       accountType: "savings",
+      variant: "savings",
       formatVersion: "v1",
     });
   });
@@ -42,6 +43,7 @@ describe("BankDetector", () => {
     expect(result).toEqual({
       bank: "HDFC",
       accountType: "savings",
+      variant: "savings",
       formatVersion: "v1",
     });
   });
@@ -52,6 +54,32 @@ describe("BankDetector", () => {
     );
     const result = detector.detect(doc);
     expect(result).toBeNull();
+  });
+
+  it("detects DBS DigiSavings", () => {
+    const doc = makeDoc(
+      "Team DBS\nSummary of AccountStatement Period 01-Jun-2026 to 30-Jun-2026\nSAVINGS 8291010000030454 INR 14,800.57 ACTIVE YES\nAccount Type: DIGISAVINGS\nDBS Bank India Limited\nplease login to digibank",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "DBS",
+      accountType: "savings",
+      variant: "digisavings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("does not detect DBS from narration alone", () => {
+    const doc = makeDoc(
+      "HDFC BANK\nSAVINGS ACCOUNT\nStatement of account\nUPI to DBS Bank via digibank",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
   });
 
   it("returns null for unknown bank", () => {
