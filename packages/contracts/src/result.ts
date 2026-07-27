@@ -10,6 +10,7 @@ export interface SourceInfo {
 export interface DetectionResult {
   bank: string;
   accountType: string;
+  variant?: string | undefined;
   formatVersion: string;
 }
 
