@@ -17,12 +17,21 @@ interface BankPattern {
  */
 const PATTERNS: BankPattern[] = [
   {
+    bank: "AXIS",
+    accountType: "savings",
+    variant: "savings",
+    formatVersion: "v1",
+    match: (text) =>
+      /Statement\s+of\s+Axis\s+Account\s+No/i.test(text),
+  },
+  {
     bank: "HDFC",
     accountType: "savings",
     variant: "savings",
     formatVersion: "v1",
     match: (text) =>
       /HDFC\s*BANK/i.test(text) &&
+      /AccountNo\s*:/i.test(text) &&
       /SAVING/i.test(text) &&
       /Statement\s*of\s*account/i.test(text),
   },

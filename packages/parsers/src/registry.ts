@@ -2,6 +2,7 @@ import type { StatementParser, DetectionResult } from "@nook/contracts";
 import { HdfcSavingsParser } from "./hdfc/savings";
 import { IndusindIndieSavingsParser } from "./indusind/indie-savings";
 import { DbsDigisavingsParser } from "./dbs/digisavings";
+import { AxisSavingsParser } from "./axis/savings";
 
 type ParserKey = string;
 
@@ -31,6 +32,10 @@ const REGISTRY = new Map<ParserKey, () => StatementParser>([
   [
     makeKey("DBS", "savings", "v1", "digisavings"),
     () => new DbsDigisavingsParser(),
+  ],
+  [
+    makeKey("AXIS", "savings", "v1", "savings"),
+    () => new AxisSavingsParser(),
   ],
 ]);
 

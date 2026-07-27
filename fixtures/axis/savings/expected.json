@@ -1,0 +1,141 @@
+{
+  "source": {
+    "path": "sample_data/savings/axis.pdf",
+    "contentHash": "19955f83010320f6f88913b6bbcda5ca2ee42a4afe21fcd92c433f24125bda11",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "AXIS",
+    "variant": "savings",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "AXIS",
+      "accountType": "savings",
+      "accountNumber": "5504885812",
+      "statementPeriod": {
+        "from": "2026-04-27",
+        "to": "2026-07-27"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 121774.27,
+    "closingBalance": 110919.27,
+    "transactions": [
+      {
+        "date": "2026-05-11",
+        "narration": "Avg bal Chgs Incl GST MAR-26",
+        "debit": 708,
+        "credit": null,
+        "balance": 121066.27,
+        "reference": "",
+        "sequence": 1
+      },
+      {
+        "date": "2026-05-23",
+        "narration": "UPI/P2A/650925900101/MOHAMMED SADIQ K /Paid v/State Bank Of India",
+        "debit": 60000,
+        "credit": null,
+        "balance": 61066.27,
+        "reference": "",
+        "sequence": 2
+      },
+      {
+        "date": "2026-05-23",
+        "narration": "UPI/P2M/614397625134/CRED Club /paymen/AXIS BANK",
+        "debit": 51000,
+        "credit": null,
+        "balance": 10066.27,
+        "reference": "",
+        "sequence": 3
+      },
+      {
+        "date": "2026-06-10",
+        "narration": "MOB/TPFT/SUPER OIL INDUS/923030008970317",
+        "debit": null,
+        "credit": 50000,
+        "balance": 60066.27,
+        "reference": "",
+        "sequence": 4
+      },
+      {
+        "date": "2026-06-13",
+        "narration": "MOB/TPFT/SUPER OIL INDUS/923030008970317",
+        "debit": null,
+        "credit": 250000,
+        "balance": 310066.27,
+        "reference": "",
+        "sequence": 5
+      },
+      {
+        "date": "2026-06-27",
+        "narration": "UPI/P2A/654429142003/K M /Paid v/HSBC",
+        "debit": 60000,
+        "credit": null,
+        "balance": 250066.27,
+        "reference": "",
+        "sequence": 6
+      },
+      {
+        "date": "2026-06-28",
+        "narration": "UPI/P2A/654500284418/MOHAMMED SADIQ K /Paid v/HDFC BANK LTD",
+        "debit": 40000,
+        "credit": null,
+        "balance": 210066.27,
+        "reference": "",
+        "sequence": 7
+      },
+      {
+        "date": "2026-07-01",
+        "narration": "SB:5504885812:Int.Pd:01-04-2026 to 30-06-2026",
+        "debit": null,
+        "credit": 853,
+        "balance": 210919.27,
+        "reference": "",
+        "sequence": 8
+      },
+      {
+        "date": "2026-07-02",
+        "narration": "UPI/P2A/654949796581/RUQAIYANAAZ KITTUR /Paid v/HDFC BANK LTD",
+        "debit": 100000,
+        "credit": null,
+        "balance": 110919.27,
+        "reference": "",
+        "sequence": 9
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}

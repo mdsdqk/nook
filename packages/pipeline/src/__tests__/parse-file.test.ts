@@ -27,6 +27,14 @@ const DBS_EXPECTED = resolve(
   __dirname,
   "../../../../fixtures/dbs/digisavings/expected.json",
 );
+const AXIS_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/axis.pdf",
+);
+const AXIS_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/axis/savings/expected.json",
+);
 
 describe("parseFile", () => {
   it("parses HDFC savings PDF matching golden fixture", async () => {
@@ -91,6 +99,28 @@ describe("parseFile", () => {
     expect(result.statement!.closingBalance).toBe(14800.57);
 
     const expected = JSON.parse(await readFile(DBS_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
+  it("parses Axis savings PDF matching golden fixture", async () => {
+    const result = await parseFile(AXIS_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "AXIS",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(9);
+    expect(result.statement!.openingBalance).toBe(121774.27);
+    expect(result.statement!.closingBalance).toBe(110919.27);
+
+    const expected = JSON.parse(await readFile(AXIS_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
     expect(result.statement).toEqual(expected.statement);
     expect(result.validation).toEqual(expected.validation);

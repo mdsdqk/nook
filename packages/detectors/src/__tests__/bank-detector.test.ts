@@ -11,7 +11,7 @@ describe("BankDetector", () => {
 
   it("detects HDFC Savings", () => {
     const doc = makeDoc(
-      "HDFC BANK\nSAVINGS ACCOUNT\nStatement of account\nsome transactions",
+      "HDFC BANK\nAccountNo : 50100684583830\nSAVINGS ACCOUNT\nStatement of account\nsome transactions",
     );
     const result = detector.detect(doc);
     expect(result).toEqual({
@@ -37,7 +37,7 @@ describe("BankDetector", () => {
 
   it("does not detect IndusInd Indie from narration alone", () => {
     const doc = makeDoc(
-      "HDFC BANK\nSAVINGS ACCOUNT\nStatement of account\nUPI to INDUSIND BANK via INDB0000008",
+      "HDFC BANK\nAccountNo : 50100684583830\nSAVINGS ACCOUNT\nStatement of account\nUPI to INDUSIND BANK via INDB0000008",
     );
     const result = detector.detect(doc);
     expect(result).toEqual({
@@ -71,7 +71,33 @@ describe("BankDetector", () => {
 
   it("does not detect DBS from narration alone", () => {
     const doc = makeDoc(
-      "HDFC BANK\nSAVINGS ACCOUNT\nStatement of account\nUPI to DBS Bank via digibank",
+      "HDFC BANK\nAccountNo : 50100684583830\nSAVINGS ACCOUNT\nStatement of account\nUPI to DBS Bank via digibank",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("detects Axis savings", () => {
+    const doc = makeDoc(
+      "Scheme: SB-PRIORITY BANKING CITI\nCurrency: INR\nStatement of Axis Account No: 5504885812 for the period (From: 27-04-2026  To: 27-07-2026)\nOPENING BALANCE           121774.27",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "AXIS",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("does not detect Axis from narration alone", () => {
+    const doc = makeDoc(
+      "HDFC BANK\nAccountNo : 50100684583830\nSAVINGS ACCOUNT\nStatement of account\nUPI/P2M/123/paymen/AXIS BANK",
     );
     const result = detector.detect(doc);
     expect(result).toEqual({
