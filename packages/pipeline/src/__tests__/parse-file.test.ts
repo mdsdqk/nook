@@ -19,6 +19,14 @@ const INDIE_EXPECTED = resolve(
   __dirname,
   "../../../../fixtures/indusind/indie_savings/expected.json",
 );
+const DBS_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/dbs.pdf",
+);
+const DBS_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/dbs/digisavings/expected.json",
+);
 
 describe("parseFile", () => {
   it("parses HDFC savings PDF matching golden fixture", async () => {
@@ -28,6 +36,7 @@ describe("parseFile", () => {
     expect(result.detection).toEqual({
       bank: "HDFC",
       accountType: "savings",
+      variant: "savings",
       formatVersion: "v1",
     });
     expect(result.validation?.passed).toBe(true);
@@ -49,7 +58,8 @@ describe("parseFile", () => {
     expect(result.errors).toEqual([]);
     expect(result.detection).toEqual({
       bank: "INDUSIND",
-      accountType: "indie_savings",
+      accountType: "savings",
+      variant: "indie",
       formatVersion: "v1",
     });
     expect(result.validation?.passed).toBe(true);
@@ -59,6 +69,28 @@ describe("parseFile", () => {
     expect(result.statement!.closingBalance).toBe(558275.69);
 
     const expected = JSON.parse(await readFile(INDIE_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
+  it("parses DBS DigiSavings PDF matching golden fixture", async () => {
+    const result = await parseFile(DBS_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "DBS",
+      accountType: "savings",
+      variant: "digisavings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(1);
+    expect(result.statement!.openingBalance).toBe(14708.57);
+    expect(result.statement!.closingBalance).toBe(14800.57);
+
+    const expected = JSON.parse(await readFile(DBS_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
     expect(result.statement).toEqual(expected.statement);
     expect(result.validation).toEqual(expected.validation);

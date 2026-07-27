@@ -15,7 +15,7 @@ const MONTHS: Record<string, string> = {
 
 /**
  * Parse common Indian bank date formats into ISO YYYY-MM-DD.
- * Supports: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY, DD MMM YYYY.
+ * Supports: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY, DD MMM YYYY, DD-MMM-YYYY.
  */
 export function parseIndianDate(raw: string): string {
   const cleaned = raw.trim();
@@ -26,7 +26,9 @@ export function parseIndianDate(raw: string): string {
     return `${yyyy}-${mm!.padStart(2, "0")}-${dd!.padStart(2, "0")}`;
   }
 
-  const textual = cleaned.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  const textual = cleaned.match(
+    /^(\d{1,2})[\s\-]+([A-Za-z]{3})[\s\-]+(\d{4})$/,
+  );
   if (textual) {
     const [, dd, mon, yyyy] = textual;
     const mm = MONTHS[mon!.toLowerCase()];

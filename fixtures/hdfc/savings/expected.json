@@ -7,6 +7,7 @@
   "detection": {
     "bank": "HDFC",
     "accountType": "savings",
+    "variant": "savings",
     "formatVersion": "v1"
   },
   "statement": {

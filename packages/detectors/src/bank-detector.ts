@@ -38,6 +38,21 @@ const PATTERNS: BankPattern[] = [
         /INDB\d{4,}/i.test(text) ||
         /INDIE\s+mobile\s+application/i.test(text)),
   },
+  {
+    bank: "DBS",
+    accountType: "savings",
+    variant: "digisavings",
+    formatVersion: "v1",
+    match: (text) =>
+      (/DBS\s+Bank/i.test(text) ||
+        /DBS\s+Bank\s+India/i.test(text) ||
+        /dbs\.com\/india/i.test(text) ||
+        /DBSS0[A-Z0-9]+/i.test(text) ||
+        /digibank/i.test(text)) &&
+      (/DIGISAVINGS/i.test(text) ||
+        (/Summary\s+of\s+Account/i.test(text) &&
+          /Statement\s*Period/i.test(text))),
+  },
 ];
 
 export class BankDetector implements Detector {
