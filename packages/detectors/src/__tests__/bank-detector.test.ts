@@ -215,7 +215,7 @@ describe("BankDetector", () => {
 
   it("detects IDFC savings", () => {
     const doc = makeDoc(
-      "STATEMENT OF ACCOUNT\nACCOUNT NO : 10215956093\nSTATEMENT PERIOD : 2026-07-01 TO 2026-07-27\nIFSC: IDFB0080157\nREGISTERED OFFICE: IDFC FIRST BANK LIMITED\nbanker@idfcfirstbank.com",
+      "STATEMENT OF ACCOUNT\nACCOUNT NO : 10000000001\nSTATEMENT PERIOD : 2026-07-01 TO 2026-07-27\nIFSC: IDFB0080157\nREGISTERED OFFICE: IDFC FIRST BANK LIMITED\nbanker@idfcfirstbank.com",
     );
     const result = detector.detect(doc);
     expect(result).toEqual({
@@ -241,7 +241,7 @@ describe("BankDetector", () => {
 
   it("detects SBI savings", () => {
     const doc = makeDoc(
-      "STATEMENT OF ACCOUNT\n State Bank of India\nAccount Number:64098746129\nIFSC Code:SBIN0010363\nStatement From :01-07-2026 to 27-07-2026\nsbi.10363@sbi.co.in",
+      "STATEMENT OF ACCOUNT\n State Bank of India\nAccount Number:64000000001\nIFSC Code:SBIN0010363\nStatement From :01-07-2026 to 27-07-2026\nsbi.10363@sbi.co.in",
     );
     const result = detector.detect(doc);
     expect(result).toEqual({
@@ -267,7 +267,7 @@ describe("BankDetector", () => {
 
   it("detects Kotak 811 savings", () => {
     const doc = makeDoc(
-      "Account Statement\n01 Jul 2026 - 26 Jul 2026\nAccount No. 9847430322\nAccount Type  Savings\nCRN xxxxxx120\nIFSC Code KKBK0008054\nSavings Account Transactions\nKotak Mahindra Bank Ltd.\nwww.kotak.bank.in",
+      "Account Statement\n01 Jul 2026 - 26 Jul 2026\nAccount No. 9800000001\nAccount Type  Savings\nCRN xxxxxx120\nIFSC Code KKBK0008054\nSavings Account Transactions\nKotak Mahindra Bank Ltd.\nwww.kotak.bank.in",
     );
     const result = detector.detect(doc);
     expect(result).toEqual({

@@ -37,7 +37,7 @@ describe("SbiSavingsParser", () => {
     const doc = makeDoc([
       "STATEMENT OF ACCOUNT",
       " State Bank of India",
-      "Account Number:64098746129",
+      "Account Number:64000000001",
       "IFSC Code:SBIN0010363",
       "Currency:INR",
       "Clear Balance:42,606.35CR",
@@ -49,7 +49,7 @@ describe("SbiSavingsParser", () => {
       "DEP TFR",
       "02/07/2026 02/07/2026 - - 1,00,000.00 2,04,450.87",
       "NEFT*HSBC0560003*HSBCN1836",
-      "2592614*MR MOHAMMED SAD",
+      "2592614*MR SAMPLE USER",
       "Statement Summary : 01-07-2026 To 27-07-2026",
       "Brought Forward( )Dr Count Cr Count Total Debits( )Total Credits( )Closing Balance( )",
       "1,34,095.09CR 15 4 3,29,763.74 2,38,275.00 42,606.35CR",
@@ -60,7 +60,7 @@ describe("SbiSavingsParser", () => {
     expect(result.metadata).toEqual({
       bank: "SBI",
       accountType: "savings",
-      accountNumber: "64098746129",
+      accountNumber: "64000000001",
       statementPeriod: {
         from: "01-07-2026",
         to: "27-07-2026",
@@ -80,7 +80,7 @@ describe("SbiSavingsParser", () => {
     });
     expect(result.transactions[1]).toMatchObject({
       date: "02/07/2026",
-      narration: "DEP TFR NEFT*HSBC0560003*HSBCN1836 2592614*MR MOHAMMED SAD",
+      narration: "DEP TFR NEFT*HSBC0560003*HSBCN1836 2592614*MR SAMPLE USER",
       debit: null,
       credit: 100000,
       balance: 204450.87,

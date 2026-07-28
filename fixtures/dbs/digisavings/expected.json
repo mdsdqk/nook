@@ -14,7 +14,7 @@
     "metadata": {
       "bank": "DBS",
       "accountType": "digisavings",
-      "accountNumber": "8291010000030454",
+      "accountNumber": "8291000000000001",
       "statementPeriod": {
         "from": "2026-06-01",
         "to": "2026-06-30"
@@ -26,7 +26,7 @@
     "transactions": [
       {
         "date": "2026-06-30",
-        "narration": "CREDIT INTEREST - Saving -8291010000030454",
+        "narration": "CREDIT INTEREST - Saving -8291000000000001",
         "debit": null,
         "credit": 92,
         "balance": 14800.57,

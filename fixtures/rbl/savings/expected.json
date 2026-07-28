@@ -14,7 +14,7 @@
     "metadata": {
       "bank": "RBL",
       "accountType": "savings",
-      "accountNumber": "309026900500",
+      "accountNumber": "309000000000",
       "statementPeriod": {
         "from": "2026-06-14",
         "to": "2026-06-30"
@@ -26,7 +26,7 @@
     "transactions": [
       {
         "date": "2026-06-30",
-        "narration": "309026900500:Int.Pd:01-06-2026 to 30-06-2026",
+        "narration": "309000000000:Int.Pd:01-06-2026 to 30-06-2026",
         "debit": null,
         "credit": 7,
         "balance": 2859.31,

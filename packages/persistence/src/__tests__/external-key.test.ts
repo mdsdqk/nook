@@ -40,7 +40,7 @@ describe("buildExternalKey", () => {
 
 describe("maskAccountNumber", () => {
   it("masks all but last 4", () => {
-    expect(maskAccountNumber("50100684583830")).toBe("XXXX3830");
+    expect(maskAccountNumber("50000000000001")).toBe("XXXX0001");
   });
 
   it("returns short numbers as-is", () => {
@@ -50,8 +50,8 @@ describe("maskAccountNumber", () => {
 
 describe("buildAccountFingerprint", () => {
   it("builds stable hashed fingerprint", () => {
-    const fp1 = buildAccountFingerprint("HDFC", "50100684583830");
-    const fp2 = buildAccountFingerprint("HDFC", "50100684583830");
+    const fp1 = buildAccountFingerprint("HDFC", "50000000000001");
+    const fp2 = buildAccountFingerprint("HDFC", "50000000000001");
     const fp3 = buildAccountFingerprint("HDFC", "12345678901234");
 
     expect(fp1).toBe(fp2);
