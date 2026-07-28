@@ -191,7 +191,91 @@ describe("BankDetector", () => {
       "State Bank of India\nSTATEMENT OF ACCOUNT\nAccount Number:12345678901\nIFSC Code:SBIN0001234\nNEFT*HSBC0123456*HSBCN0001",
     );
     const result = detector.detect(doc);
-    expect(result).toBeNull();
+    expect(result?.bank).not.toBe("HSBC");
+    expect(result).toEqual({
+      bank: "SBI",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("detects IDFC savings", () => {
+    const doc = makeDoc(
+      "STATEMENT OF ACCOUNT\nACCOUNT NO : 10215956093\nSTATEMENT PERIOD : 2026-07-01 TO 2026-07-27\nIFSC: IDFB0080157\nREGISTERED OFFICE: IDFC FIRST BANK LIMITED\nbanker@idfcfirstbank.com",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "IDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("does not detect IDFC from narration alone", () => {
+    const doc = makeDoc(
+      "HDFC BANK\nAccountNo : 50100123456789\nSAVINGS ACCOUNT\nStatement of account\nUPI/P2A/123/Paid v/IDFC FIRST BANK/IDFB0080157",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("detects SBI savings", () => {
+    const doc = makeDoc(
+      "STATEMENT OF ACCOUNT\n State Bank of India\nAccount Number:64098746129\nIFSC Code:SBIN0010363\nStatement From :01-07-2026 to 27-07-2026\nsbi.10363@sbi.co.in",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "SBI",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("does not detect SBI from narration alone", () => {
+    const doc = makeDoc(
+      "HDFC BANK\nAccountNo : 50100123456789\nSAVINGS ACCOUNT\nStatement of account\nUPI/P2A/123/Paid v/State Bank of India/SBIN0010363",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("detects Kotak 811 savings", () => {
+    const doc = makeDoc(
+      "Account Statement\n01 Jul 2026 - 26 Jul 2026\nAccount No. 9847430322\nAccount Type  Savings\nCRN xxxxxx120\nIFSC Code KKBK0008054\nSavings Account Transactions\nKotak Mahindra Bank Ltd.\nwww.kotak.bank.in",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "KOTAK",
+      accountType: "savings",
+      variant: "811",
+      formatVersion: "v1",
+    });
+  });
+
+  it("does not detect Kotak from narration alone", () => {
+    const doc = makeDoc(
+      "HDFC BANK\nAccountNo : 50100123456789\nSAVINGS ACCOUNT\nStatement of account\nUPI/P2A/123/Paid v/Kotak Mahindra Bank/KKBK0008054",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
   });
 
   it("returns null for unknown bank", () => {

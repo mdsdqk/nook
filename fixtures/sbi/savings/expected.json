@@ -1,0 +1,231 @@
+{
+  "source": {
+    "path": "sample_data/savings/sbi.pdf",
+    "contentHash": "c63454039ebc1963076af2244f840aa5f6612dbefdef42c108da99644184b5b5",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "SBI",
+    "variant": "savings",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "SBI",
+      "accountType": "savings",
+      "accountNumber": "64098746129",
+      "statementPeriod": {
+        "from": "2026-07-01",
+        "to": "2026-07-27"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 134095.09,
+    "closingBalance": 42606.35,
+    "transactions": [
+      {
+        "date": "2026-07-02",
+        "narration": "POS ATM PURCH OTHPG 618345022694MOBIKWIK GURUGRAM",
+        "debit": 24983,
+        "credit": null,
+        "balance": 109112.09,
+        "reference": "",
+        "sequence": 1
+      },
+      {
+        "date": "2026-07-02",
+        "narration": "POS ATM PURCH OTHPG 618345022823MOBIKWIK GURUGRAM",
+        "debit": 4661.22,
+        "credit": null,
+        "balance": 104450.87,
+        "reference": "",
+        "sequence": 2
+      },
+      {
+        "date": "2026-07-02",
+        "narration": "DEP TFR NEFT*HSBC0560003*HSBCN1836 2592614*MR MOHAMMED SAD 0099509044300 AT 10363 SARJAPURA ROAD",
+        "debit": null,
+        "credit": 100000,
+        "balance": 204450.87,
+        "reference": "",
+        "sequence": 3
+      },
+      {
+        "date": "2026-07-03",
+        "narration": "POS ATM PURCH OTHPG 618441014014MOBIKWIK GURUGRAM",
+        "debit": 6984.9,
+        "credit": null,
+        "balance": 197465.97,
+        "reference": "",
+        "sequence": 4
+      },
+      {
+        "date": "2026-07-04",
+        "narration": "POS ATM PURCH OTHPG 618542014022MOBIKWIK GURUGRAM",
+        "debit": 49931.54,
+        "credit": null,
+        "balance": 147534.43,
+        "reference": "",
+        "sequence": 5
+      },
+      {
+        "date": "2026-07-05",
+        "narration": "POS ATM PURCH OTHPG 618644016464MOBIKWIK GURUGRAM",
+        "debit": 21613.8,
+        "credit": null,
+        "balance": 125920.63,
+        "reference": "",
+        "sequence": 6
+      },
+      {
+        "date": "2026-07-05",
+        "narration": "POS ATM PURCH OTHPG 618646025123MOBIKWIK GURUGRAM",
+        "debit": 4619.52,
+        "credit": null,
+        "balance": 121301.11,
+        "reference": "",
+        "sequence": 7
+      },
+      {
+        "date": "2026-07-05",
+        "narration": "POS ATM PURCH OTHPG 618641029016MOBIKWIK GURUGRAM",
+        "debit": 14464,
+        "credit": null,
+        "balance": 106837.11,
+        "reference": "",
+        "sequence": 8
+      },
+      {
+        "date": "2026-07-13",
+        "narration": "DEP TFR UPI/CR/619408797365/SHARAN A/HDFC/sharanahuj/UPI 0097732162091 AT 10363 SARJAPURA ROAD",
+        "debit": null,
+        "credit": 8275,
+        "balance": 115112.11,
+        "reference": "",
+        "sequence": 9
+      },
+      {
+        "date": "2026-07-16",
+        "narration": "DEP TFR UPI/CR/656305129985/MOHAMME D/ICIC/9632740312/Paid 0097735162098 AT 10363 SARJAPURA ROAD",
+        "debit": null,
+        "credit": 40000,
+        "balance": 155112.11,
+        "reference": "",
+        "sequence": 10
+      },
+      {
+        "date": "2026-07-22",
+        "narration": "POS ATM PURCH OTHPG 620341019704MOBIKWIK GURUGRAM",
+        "debit": 4518,
+        "credit": null,
+        "balance": 150594.11,
+        "reference": "",
+        "sequence": 11
+      },
+      {
+        "date": "2026-07-22",
+        "narration": "POS ATM PURCH OTHPG 620341032673MOBIKWIK GURUGRAM",
+        "debit": 3465.85,
+        "credit": null,
+        "balance": 147128.26,
+        "reference": "",
+        "sequence": 12
+      },
+      {
+        "date": "2026-07-24",
+        "narration": "POS ATM PURCH OTHPG 620519486728DREAMPLUGTECH NOLOGIES Bangalore",
+        "debit": 50000,
+        "credit": null,
+        "balance": 97128.26,
+        "reference": "",
+        "sequence": 13
+      },
+      {
+        "date": "2026-07-25",
+        "narration": "POS ATM PURCH OTHPG 620609214351BILLDESK MUMBAI",
+        "debit": 40700,
+        "credit": null,
+        "balance": 56428.26,
+        "reference": "",
+        "sequence": 14
+      },
+      {
+        "date": "2026-07-25",
+        "narration": "POS ATM PURCH OTHPG 620643018647MOBIKWIK GURUGRAM",
+        "debit": 4847,
+        "credit": null,
+        "balance": 51581.26,
+        "reference": "",
+        "sequence": 15
+      },
+      {
+        "date": "2026-07-26",
+        "narration": "POS ATM PURCH OTHPG 620714309795BILLDESK MUMBAI",
+        "debit": 39620,
+        "credit": null,
+        "balance": 11961.26,
+        "reference": "",
+        "sequence": 16
+      },
+      {
+        "date": "2026-07-26",
+        "narration": "POS ATM PURCH OTHPG 620744043496MOBIKWIK GURUGRAM",
+        "debit": 9404.91,
+        "credit": null,
+        "balance": 2556.35,
+        "reference": "",
+        "sequence": 17
+      },
+      {
+        "date": "2026-07-27",
+        "narration": "DEP TFR UPI/CR/620854301196/MOHAMME D/ICIC/md.sdq.k-1/UPI 0097732162091 AT 10363 SARJAPURA ROAD",
+        "debit": null,
+        "credit": 90000,
+        "balance": 92556.35,
+        "reference": "",
+        "sequence": 18
+      },
+      {
+        "date": "2026-07-27",
+        "narration": "POS ATM PURCH OTHPG 620809398252DREAMPLUGTECH NOLOGIES Bangalore",
+        "debit": 49950,
+        "credit": null,
+        "balance": 42606.35,
+        "reference": "",
+        "sequence": 19
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}

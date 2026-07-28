@@ -1,0 +1,78 @@
+{
+  "source": {
+    "path": "sample_data/savings/idfc.pdf",
+    "contentHash": "ebca60ac0aaee2047f8066586b1640365517f6d9a4b2b3a3c9f8c854f7d52621",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "IDFC",
+    "variant": "savings",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "IDFC",
+      "accountType": "savings",
+      "accountNumber": "10215956093",
+      "statementPeriod": {
+        "from": "2026-07-01",
+        "to": "2026-07-27"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 14006.35,
+    "closingBalance": 24581.35,
+    "transactions": [
+      {
+        "date": "2026-07-02",
+        "narration": "NEFT/ HSBCN18362592383/MR MOHAMMED SADIQ K/ HSBC0560003/MR MOHAMMED SADIQ K121,1ST FLOOR,GOLDEN CORNER APTS BELLANDUR GATERD BELLANDUR,BENGALURU560103/ IN",
+        "debit": null,
+        "credit": 60000,
+        "balance": 74006.35,
+        "reference": "",
+        "sequence": 1
+      },
+      {
+        "date": "2026-07-05",
+        "narration": "NACH/HDFC BANK LTD/468083213",
+        "debit": 49425,
+        "credit": null,
+        "balance": 24581.35,
+        "reference": "",
+        "sequence": 2
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}

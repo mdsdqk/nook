@@ -6,6 +6,9 @@ import { AxisSavingsParser } from "./axis/savings";
 import { RblSavingsParser } from "./rbl/savings";
 import { IciciSavingsParser } from "./icici/savings";
 import { HsbcSavingsParser } from "./hsbc/savings";
+import { IdfcSavingsParser } from "./idfc/savings";
+import { SbiSavingsParser } from "./sbi/savings";
+import { Kotak811SavingsParser } from "./kotak/811-savings";
 
 type ParserKey = string;
 
@@ -52,6 +55,18 @@ const REGISTRY = new Map<ParserKey, () => StatementParser>([
   [
     makeKey("HSBC", "savings", "v1", "savings"),
     () => new HsbcSavingsParser(),
+  ],
+  [
+    makeKey("IDFC", "savings", "v1", "savings"),
+    () => new IdfcSavingsParser(),
+  ],
+  [
+    makeKey("SBI", "savings", "v1", "savings"),
+    () => new SbiSavingsParser(),
+  ],
+  [
+    makeKey("KOTAK", "savings", "v1", "811"),
+    () => new Kotak811SavingsParser(),
   ],
 ]);
 
