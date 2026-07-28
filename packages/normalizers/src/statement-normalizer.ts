@@ -8,8 +8,8 @@ export class StatementNormalizer implements Normalizer {
       metadata: {
         ...statement.metadata,
         statementPeriod: {
-          from: toISODate(statement.metadata.statementPeriod.from),
-          to: toISODate(statement.metadata.statementPeriod.to),
+          from: this.normalizeDate(statement.metadata.statementPeriod.from),
+          to: this.normalizeDate(statement.metadata.statementPeriod.to),
         },
       },
       transactions: statement.transactions.map((txn) =>
@@ -21,8 +21,16 @@ export class StatementNormalizer implements Normalizer {
   private normalizeTxn(txn: ParsedTransaction): ParsedTransaction {
     return {
       ...txn,
-      date: toISODate(txn.date),
+      date: this.normalizeDate(txn.date),
       narration: cleanWhitespace(txn.narration),
     };
+  }
+
+  private normalizeDate(raw: string): string {
+    const cleaned = raw.trim();
+    if (!cleaned) {
+      return "";
+    }
+    return toISODate(cleaned);
   }
 }

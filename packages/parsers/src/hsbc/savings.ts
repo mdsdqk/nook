@@ -8,42 +8,49 @@ import type {
 } from "@nook/contracts";
 
 /**
- * HSBC India savings statement parser.
+ * HSBC Premier savings statement parser.
  *
- * Layout (text-extractable HSBC India e-statements):
- *   The Hongkong and Shanghai Banking Corporation Limited / HSBC Bank
- *   Account Number / Account No: <n>
- *   Statement Period / From … To … / Statement Date
- *   Date Particulars / Transaction Details Withdrawal Deposit Balance
- *   Opening Balance <amount>
- *   DD/MM/YYYY <narration> <amount> <balance>
- *   Closing Balance <amount>
+ * Layout (from sample_data/savings/hsbc-savings.pdf):
+ *   SAVINGS ACCOUNT-RES <account-no>
+ *   Date Transaction Details Deposits Withdrawals Balance
+ *   Balance Brought Forward <amount>
+ *   <DDMonYYYY> <narration-start>
+ *   <wrapped narration lines>
+ *   <value/trace line> <amount> <balance>
+ *   ...
+ *   CLOSING BALANCE <amount>
  *
- * Note: some HSBC India PDFs (including sample_data/savings/hsbc.pdf) embed
- * text as images with no extractable text layer — those need OCR and are
- * out of scope for this text parser.
- *
- * Debit/credit columns are not reliably separated in extracted text, so
- * direction is inferred from the running balance delta.
+ * Debit/credit columns are not reliably aligned in extracted text, so
+ * direction is inferred from running balance deltas.
  */
 
-const TXN_DATE = /^(\d{2}\/\d{2}\/\d{4}|\d{1,2}-[A-Za-z]{3}-\d{4}|\d{1,2}\s+[A-Za-z]{3}\s+\d{4})\b/;
-const AMOUNT = /[\d,]+\.\d{2}/g;
+const TXN_DATE_COMPACT = /^(\d{1,2}[A-Za-z]{3}\d{2,4})\b/;
+const DATE_EMBEDDED = /\b(\d{1,2}[A-Za-z]{3}\d{2,4})\b/;
+const TRAILING_AMOUNT_PAIR = /([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/;
 
-const FOOTER_MARKERS = [
-  /^Closing\s+Balance\b/i,
-  /^\*{2,}\s*End\s+of\s+Statement/i,
-  /^End\s+of\s+Statement\b/i,
+const HISTORY_HEADER =
+  /^Date\s+Transaction\s+Details\s+Deposits\s+Withdrawals\s+Balance$/i;
+
+const HISTORY_SKIP = [
+  /^SAVINGS\s+ACCOUNT-RES\b/i,
+  /^Nominee\s+Registered\b/i,
+  /^MICR\s+CODE\b/i,
+  /^IFSC\s+CODE\b/i,
+  /^\(DR=Debit\)\s*$/i,
+  /^INR\s*$/i,
+  /^Balance\s+Brought\s+Forward\b/i,
+  /^Balance\s+Carried\s+Forward\b/i,
   /^Page\s+\d+\s+of\s+\d+/i,
-  /Registered\s+Office\s*:/i,
 ];
+
+const HISTORY_END = [/^CLOSING\s+BALANCE\b/i, /^Transaction\s+Turnover\b/i];
 
 export class HsbcSavingsParser implements StatementParser {
   parse(doc: ParsedDocument, _detection: DetectionResult): ParsedStatement {
-    const metadata = this.extractMetadata(doc);
     const openingBalance = this.extractOpeningBalance(doc);
-    const closingFromLine = this.extractClosingBalance(doc);
     const rawTxns = this.extractRawTransactions(doc);
+    const metadata = this.extractMetadata(doc, rawTxns);
+    const closingFromLine = this.extractClosingBalance(doc);
 
     const transactions = rawTxns.map((raw, idx) =>
       this.finalizeTxn(raw, idx + 1, openingBalance, rawTxns.slice(0, idx)),
@@ -63,12 +70,16 @@ export class HsbcSavingsParser implements StatementParser {
     };
   }
 
-  private extractMetadata(doc: ParsedDocument): StatementMetadata {
+  private extractMetadata(
+    doc: ParsedDocument,
+    transactions: RawTxn[],
+  ): StatementMetadata {
     const text = doc.rawText;
 
     const accountNumber =
-      text.match(/Account\s*(?:Number|No\.?)\s*:?\s*(\d{9,})/i)?.[1] ??
-      text.match(/\bA\/C\s*(?:No\.?|Number)\s*:?\s*(\d{9,})/i)?.[1] ??
+      text.match(/SAVINGS\s+ACCOUNT-RES\s+([0-9-]+)/i)?.[1] ??
+      text.match(/Account\s*(?:Number|No\.?)\s*:?\s*([0-9-]+)/i)?.[1] ??
+      text.match(/\bA\/C\s*(?:No\.?|Number)\s*:?\s*([0-9-]+)/i)?.[1] ??
       "";
 
     const periodMatch =
@@ -79,6 +90,11 @@ export class HsbcSavingsParser implements StatementParser {
         /From\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+To\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
       );
 
+    const fallbackFrom =
+      transactions.length > 0 ? transactions[0]!.date : "";
+    const fallbackTo =
+      transactions.length > 0 ? transactions[transactions.length - 1]!.date : "";
+
     const currency =
       text.match(/Currency\s*:?\s*(INR|Rs\.?)/i)?.[1]?.replace(/Rs\.?/i, "INR") ??
       "INR";
@@ -88,113 +104,132 @@ export class HsbcSavingsParser implements StatementParser {
       accountType: "savings",
       accountNumber,
       statementPeriod: {
-        from: periodMatch?.[1] ?? "",
-        to: periodMatch?.[2] ?? "",
+        from: periodMatch?.[1] ?? fallbackFrom,
+        to: periodMatch?.[2] ?? fallbackTo,
       },
       currency: currency === "INR" ? "INR" : currency,
     };
   }
 
   private extractOpeningBalance(doc: ParsedDocument): number {
-    const match = doc.rawText.match(
+    const broughtForward = doc.rawText.match(
+      /BALANCE\s+BROUGHT\s+FORWARD\s*([\d,]+\.\d{2})/i,
+    );
+    if (broughtForward?.[1]) {
+      return this.parseAmount(broughtForward[1]);
+    }
+
+    const openingBalance = doc.rawText.match(
       /Opening\s+Balance\s*:?\s*([\d,]+\.\d{2})/i,
     );
-    if (match?.[1]) {
-      return parseFloat(match[1].replace(/,/g, ""));
+    if (openingBalance?.[1]) {
+      return this.parseAmount(openingBalance[1]);
     }
     return 0;
   }
 
   private extractClosingBalance(doc: ParsedDocument): number | null {
     const match = doc.rawText.match(
-      /Closing\s+Balance\s*:?\s*([\d,]+\.\d{2})/i,
+      /CLOSING\s+BALANCE\s*:?\s*([\d,]+\.\d{2})/i,
     );
     if (match?.[1]) {
-      return parseFloat(match[1].replace(/,/g, ""));
+      return this.parseAmount(match[1]);
     }
     return null;
   }
 
   private extractRawTransactions(doc: ParsedDocument): RawTxn[] {
     const transactions: RawTxn[] = [];
-    let current: RawTxn | null = null;
     let inHistory = false;
+    let currentDate = "";
+    let currentNarrationParts: string[] = [];
+    let lastSeenTxnDate = "";
+
+    const flushCurrent = (amount: number, balance: number) => {
+      const chosenDate =
+        currentDate ||
+        this.extractEmbeddedCompactDate(currentNarrationParts.join(" ")) ||
+        lastSeenTxnDate;
+      if (!chosenDate) {
+        currentNarrationParts = [];
+        return;
+      }
+
+      const narration = currentNarrationParts.join(" ").trim();
+      transactions.push({
+        date: chosenDate,
+        narration,
+        amount,
+        balance,
+      });
+
+      lastSeenTxnDate = chosenDate;
+      currentDate = "";
+      currentNarrationParts = [];
+    };
 
     for (const page of doc.pages) {
       for (const line of page.lines) {
         const trimmed = line.text.trim();
         if (!trimmed) continue;
 
-        if (
-          (/^(?:Tran(?:saction)?\s+)?Date\b/i.test(trimmed) ||
-            /\bDate\b/i.test(trimmed)) &&
-          (/Particulars/i.test(trimmed) ||
-            /Transaction\s+Details/i.test(trimmed) ||
-            /Narration/i.test(trimmed) ||
-            /Description/i.test(trimmed)) &&
-          /Balance/i.test(trimmed)
-        ) {
+        if (HISTORY_HEADER.test(trimmed)) {
           inHistory = true;
           continue;
         }
 
         if (!inHistory) continue;
 
-        if (/^Opening\s+Balance\b/i.test(trimmed)) {
+        if (HISTORY_SKIP.some((re) => re.test(trimmed))) {
           continue;
         }
 
-        if (FOOTER_MARKERS.some((re) => re.test(trimmed))) {
-          if (current) {
-            transactions.push(current);
-            current = null;
+        if (/BALANCE\s+BROUGHT\s+FORWARD/i.test(trimmed)) {
+          currentDate = "";
+          currentNarrationParts = [];
+          continue;
+        }
+
+        if (HISTORY_END.some((re) => re.test(trimmed))) {
+          const amountPair = this.extractTrailingAmountPair(trimmed);
+          if (amountPair) {
+            const [amount, balance] = amountPair;
+            flushCurrent(amount, balance);
           }
           inHistory = false;
           continue;
         }
 
-        if (TXN_DATE.test(trimmed)) {
-          if (current) {
-            transactions.push(current);
+        const dateMatch = trimmed.match(TXN_DATE_COMPACT);
+        if (dateMatch?.[1]) {
+          currentDate = this.normalizeCompactDate(dateMatch[1]);
+          if (currentDate) {
+            lastSeenTxnDate = currentDate;
           }
-          current = this.parseTransactionLine(trimmed);
-        } else if (current) {
-          current.narration += " " + trimmed;
+          const afterDate = trimmed.slice(dateMatch[0].length).trim();
+          if (afterDate) {
+            currentNarrationParts.push(afterDate);
+          }
+        } else {
+          currentNarrationParts.push(trimmed);
+        }
+
+        const candidate = currentNarrationParts.join(" ").trim();
+        const amountPair = this.extractTrailingAmountPair(candidate);
+        if (amountPair) {
+          const [amount, balance] = amountPair;
+          const narrationWithoutAmounts = candidate
+            .replace(TRAILING_AMOUNT_PAIR, "")
+            .trim();
+          currentNarrationParts = narrationWithoutAmounts
+            ? [narrationWithoutAmounts]
+            : [];
+          flushCurrent(amount, balance);
         }
       }
     }
 
-    if (current) {
-      transactions.push(current);
-    }
-
     return transactions;
-  }
-
-  private parseTransactionLine(text: string): RawTxn {
-    const dateMatch = text.match(TXN_DATE);
-    const date = dateMatch?.[1] ?? "";
-    const afterDate = text.slice(dateMatch?.[0].length ?? 0).trim();
-
-    const amounts: { value: number; index: number }[] = [];
-    let m: RegExpExecArray | null;
-    AMOUNT.lastIndex = 0;
-    while ((m = AMOUNT.exec(afterDate)) !== null) {
-      amounts.push({
-        value: parseFloat(m[0].replace(/,/g, "")),
-        index: m.index,
-      });
-    }
-
-    const lastTwo = amounts.slice(-2);
-    const amount = lastTwo[0]?.value ?? 0;
-    const balance = lastTwo[1]?.value ?? lastTwo[0]?.value ?? 0;
-    const narration =
-      lastTwo.length > 0
-        ? afterDate.slice(0, lastTwo[0]!.index).trim()
-        : afterDate;
-
-    return { date, narration, amount, balance };
   }
 
   private finalizeTxn(
@@ -220,6 +255,44 @@ export class HsbcSavingsParser implements StatementParser {
       reference: "",
       sequence,
     };
+  }
+
+  private extractTrailingAmountPair(text: string): [number, number] | null {
+    const match = text.match(TRAILING_AMOUNT_PAIR);
+    if (!match?.[1] || !match[2]) return null;
+    return [this.parseAmount(match[1]), this.parseAmount(match[2])];
+  }
+
+  private extractEmbeddedCompactDate(text: string): string {
+    const match = text.match(DATE_EMBEDDED);
+    if (!match?.[1]) return "";
+    return this.normalizeCompactDate(match[1]);
+  }
+
+  private normalizeCompactDate(raw: string): string {
+    const m = raw.match(/^(\d{1,2})([A-Za-z]{3})(\d{2,4})$/);
+    if (!m) return "";
+
+    const dd = m[1]!.padStart(2, "0");
+    const mon = this.toTitleCaseMonth(m[2]!);
+    const year = m[3]!;
+    const yyyy =
+      year.length === 4
+        ? year
+        : String(
+            (parseInt(year, 10) > 50 ? 1900 : 2000) + parseInt(year, 10),
+          );
+
+    return `${dd} ${mon} ${yyyy}`;
+  }
+
+  private toTitleCaseMonth(raw: string): string {
+    const lower = raw.toLowerCase();
+    return lower[0]!.toUpperCase() + lower.slice(1, 3);
+  }
+
+  private parseAmount(raw: string): number {
+    return parseFloat(raw.replace(/,/g, ""));
   }
 }
 
