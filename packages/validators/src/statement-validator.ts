@@ -105,18 +105,24 @@ export class StatementValidator implements Validator {
       });
     }
 
-    // Check for duplicate references
-    const refs = stmt.transactions
-      .map((t) => t.reference)
-      .filter((r) => r.length > 0);
-    const uniqueRefs = new Set(refs);
+    // Duplicate refs only when the same bank reference appears on an
+    // identical ledger line (true double-parse). Shared refs across
+    // distinct lines are legitimate (e.g. UPI debit + REV-UPI credit).
+    const fingerprints = stmt.transactions
+      .filter((t) => t.reference.length > 0 && !/^0+$/.test(t.reference))
+      .map(
+        (t) =>
+          `${t.reference}|${t.date}|${t.debit ?? ""}|${t.credit ?? ""}|${t.balance}`,
+      );
+    const uniqueFingerprints = new Set(fingerprints);
+    const duplicateCount = fingerprints.length - uniqueFingerprints.size;
     entries.push({
       category: "semantic",
-      passed: refs.length === uniqueRefs.size,
+      passed: duplicateCount === 0,
       message:
-        refs.length === uniqueRefs.size
+        duplicateCount === 0
           ? "No duplicate references"
-          : `${refs.length - uniqueRefs.size} duplicate reference(s)`,
+          : `${duplicateCount} duplicate reference(s)`,
     });
 
     return entries;

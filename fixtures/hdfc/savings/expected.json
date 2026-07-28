@@ -75,7 +75,7 @@
         "debit": null,
         "credit": 234,
         "balance": 2159.41,
-        "reference": "000000000000000",
+        "reference": "",
         "sequence": 6
       }
     ]
