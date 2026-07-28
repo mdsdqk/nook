@@ -35,6 +35,14 @@ const AXIS_EXPECTED = resolve(
   __dirname,
   "../../../../fixtures/axis/savings/expected.json",
 );
+const RBL_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/rbl.pdf",
+);
+const RBL_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/rbl/savings/expected.json",
+);
 
 describe("parseFile", () => {
   it("parses HDFC savings PDF matching golden fixture", async () => {
@@ -121,6 +129,28 @@ describe("parseFile", () => {
     expect(result.statement!.closingBalance).toBe(110919.27);
 
     const expected = JSON.parse(await readFile(AXIS_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
+  it("parses RBL savings PDF matching golden fixture", async () => {
+    const result = await parseFile(RBL_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "RBL",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(1);
+    expect(result.statement!.openingBalance).toBe(2852.31);
+    expect(result.statement!.closingBalance).toBe(2859.31);
+
+    const expected = JSON.parse(await readFile(RBL_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
     expect(result.statement).toEqual(expected.statement);
     expect(result.validation).toEqual(expected.validation);

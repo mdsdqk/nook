@@ -3,6 +3,8 @@ import { HdfcSavingsParser } from "./hdfc/savings";
 import { IndusindIndieSavingsParser } from "./indusind/indie-savings";
 import { DbsDigisavingsParser } from "./dbs/digisavings";
 import { AxisSavingsParser } from "./axis/savings";
+import { RblSavingsParser } from "./rbl/savings";
+import { HsbcSavingsParser } from "./hsbc/savings";
 
 type ParserKey = string;
 
@@ -23,8 +25,9 @@ function makeKey(
 
 const REGISTRY = new Map<ParserKey, () => StatementParser>([
   [
-    makeKey("HDFC", "savings", "v1", "savings"), 
-    () => new HdfcSavingsParser()],
+    makeKey("HDFC", "savings", "v1", "savings"),
+    () => new HdfcSavingsParser(),
+  ],
   [
     makeKey("INDUSIND", "savings", "v1", "indie"),
     () => new IndusindIndieSavingsParser(),
@@ -36,6 +39,14 @@ const REGISTRY = new Map<ParserKey, () => StatementParser>([
   [
     makeKey("AXIS", "savings", "v1", "savings"),
     () => new AxisSavingsParser(),
+  ],
+  [
+    makeKey("RBL", "savings", "v1", "savings"),
+    () => new RblSavingsParser(),
+  ],
+  [
+    makeKey("HSBC", "savings", "v1", "savings"),
+    () => new HsbcSavingsParser(),
   ],
 ]);
 
