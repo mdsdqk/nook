@@ -62,6 +62,33 @@ const PATTERNS: BankPattern[] = [
         (/Summary\s+of\s+Account/i.test(text) &&
           /Statement\s*Period/i.test(text))),
   },
+  {
+    bank: "RBL",
+    accountType: "savings",
+    variant: "savings",
+    formatVersion: "v1",
+    match: (text) =>
+      /Statement\s+of\s+Transactions\s+in\s+Savings\s+Account\s+Number/i.test(
+        text,
+      ) &&
+      (/RATN\d{4,}/i.test(text) ||
+        /RBL\s+Bank/i.test(text) ||
+        /rblbank\.com/i.test(text)),
+  },
+  {
+    bank: "HSBC",
+    accountType: "savings",
+    variant: "savings",
+    formatVersion: "v1",
+    match: (text) =>
+      (/Hongkong\s+and\s+Shanghai\s+Banking\s+Corporation/i.test(text) ||
+        /\bHSBC\s+Bank\b/i.test(text) ||
+        /hsbc\.co\.in/i.test(text) ||
+        /IFSC(?:\s*Code)?\s*:?\s*HSBC0[A-Z0-9]+/i.test(text)) &&
+      (/Statement\s+of\s+Account/i.test(text) ||
+        /Account\s+Statement/i.test(text) ||
+        /Savings\s+Account/i.test(text)),
+  },
 ];
 
 export class BankDetector implements Detector {

@@ -49,9 +49,9 @@ describe("StatementValidator", () => {
     expect(financial?.passed).toBe(false);
   });
 
-  it("detects duplicate references", () => {
+  it("detects duplicate references on identical ledger lines", () => {
     const stmt = makeStatement({
-      closingBalance: 8000,
+      closingBalance: 9000,
       openingBalance: 10000,
       transactions: [
         {
@@ -64,11 +64,11 @@ describe("StatementValidator", () => {
           sequence: 1,
         },
         {
-          date: "2026-06-20",
-          narration: "B",
+          date: "2026-06-10",
+          narration: "A",
           debit: 1000,
           credit: null,
-          balance: 8000,
+          balance: 9000,
           reference: "DUP",
           sequence: 2,
         },
@@ -79,6 +79,38 @@ describe("StatementValidator", () => {
       (e) => e.category === "semantic" && e.message.includes("duplicate"),
     );
     expect(semantic?.passed).toBe(false);
+  });
+
+  it("allows shared references across distinct ledger lines", () => {
+    const stmt = makeStatement({
+      closingBalance: 10000,
+      openingBalance: 10000,
+      transactions: [
+        {
+          date: "2026-06-10",
+          narration: "UPI payment",
+          debit: 140,
+          credit: null,
+          balance: 9860,
+          reference: "0000103032013995",
+          sequence: 1,
+        },
+        {
+          date: "2026-06-10",
+          narration: "REV-UPI reversal",
+          debit: null,
+          credit: 140,
+          balance: 10000,
+          reference: "0000103032013995",
+          sequence: 2,
+        },
+      ],
+    });
+    const result = validator.validate(stmt);
+    const semantic = result.entries.find(
+      (e) => e.category === "semantic" && e.message.includes("duplicate"),
+    );
+    expect(semantic?.passed).toBe(true);
   });
 
   it("fails when no transactions", () => {

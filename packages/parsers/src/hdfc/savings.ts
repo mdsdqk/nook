@@ -97,22 +97,36 @@ export class HdfcSavingsParser implements StatementParser {
     let seq = 0;
 
     for (const page of doc.pages) {
+      // Column header appears on page 1 only. Continuation pages jump
+      // straight from account boilerplate into dated transaction rows.
       const headerIdx = page.lines.findIndex(
         (l) =>
           l.text.includes("ClosingBalance") &&
           l.text.includes("Date") &&
           l.text.includes("Narration"),
       );
-      if (headerIdx === -1) continue;
+      const firstTxnIdx = page.lines.findIndex((l) =>
+        DATE_PATTERN.test(l.text.trim().split(/\s+/)[0] ?? ""),
+      );
+      const startIdx = headerIdx !== -1 ? headerIdx + 1 : firstTxnIdx;
+      if (startIdx === -1) continue;
 
       const summaryIdx = page.lines.findIndex((l) =>
         l.text.includes("STATEMENTSUMMARY"),
       );
-      const endIdx = summaryIdx !== -1 ? summaryIdx : page.lines.length;
+      // Multi-page statements put bank footer after the last txn on each
+      // page (no STATEMENTSUMMARY until the final page).
+      const footerIdx = page.lines.findIndex((l) =>
+        this.isPageFooter(l.text),
+      );
+      let endIdx = page.lines.length;
+      if (summaryIdx !== -1) endIdx = Math.min(endIdx, summaryIdx);
+      if (footerIdx !== -1) endIdx = Math.min(endIdx, footerIdx);
+      if (endIdx <= startIdx) continue;
 
       let currentTxn: RawTxn | null = null;
 
-      for (let i = headerIdx + 1; i < endIdx; i++) {
+      for (let i = startIdx; i < endIdx; i++) {
         const line = page.lines[i]!;
         const trimmed = line.text.trim();
         if (!trimmed) continue;
@@ -142,6 +156,15 @@ export class HdfcSavingsParser implements StatementParser {
     }
 
     return transactions;
+  }
+
+  private isPageFooter(text: string): boolean {
+    const trimmed = text.trim();
+    return (
+      trimmed.includes("HDFCBANKLIMITED") ||
+      /^GeneratedOn\s*:/i.test(trimmed) ||
+      trimmed.includes("Thisisacomputergeneratedstatement")
+    );
   }
 
   private parseTransactionLine(
@@ -226,7 +249,8 @@ export class HdfcSavingsParser implements StatementParser {
       debit: isCredit ? null : raw.amount,
       credit: isCredit ? raw.amount : null,
       balance: raw.balance,
-      reference: raw.ref,
+      // HDFC uses all-zero Chq./Ref.No. as a placeholder (interest, etc.)
+      reference: /^0+$/.test(raw.ref) ? "" : raw.ref,
       sequence: seq,
     };
   }

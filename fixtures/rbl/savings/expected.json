@@ -1,0 +1,69 @@
+{
+  "source": {
+    "path": "sample_data/savings/rbl.pdf",
+    "contentHash": "93dc5b38249cfc0e1e0b254d2cac1979cb61de6ff815f0770343abff6fb0a116",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "RBL",
+    "variant": "savings",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "RBL",
+      "accountType": "savings",
+      "accountNumber": "309026900500",
+      "statementPeriod": {
+        "from": "2026-06-14",
+        "to": "2026-06-30"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 2852.31,
+    "closingBalance": 2859.31,
+    "transactions": [
+      {
+        "date": "2026-06-30",
+        "narration": "309026900500:Int.Pd:01-06-2026 to 30-06-2026",
+        "debit": null,
+        "credit": 7,
+        "balance": 2859.31,
+        "reference": "",
+        "sequence": 1
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}
