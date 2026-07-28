@@ -43,6 +43,14 @@ const RBL_EXPECTED = resolve(
   __dirname,
   "../../../../fixtures/rbl/savings/expected.json",
 );
+const ICICI_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/icici.pdf",
+);
+const ICICI_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/icici/savings/expected.json",
+);
 
 describe("parseFile", () => {
   it("parses HDFC savings PDF matching golden fixture", async () => {
@@ -151,6 +159,28 @@ describe("parseFile", () => {
     expect(result.statement!.closingBalance).toBe(2859.31);
 
     const expected = JSON.parse(await readFile(RBL_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
+  it("parses ICICI savings PDF matching golden fixture", async () => {
+    const result = await parseFile(ICICI_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "ICICI",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(11);
+    expect(result.statement!.openingBalance).toBe(26694.95);
+    expect(result.statement!.closingBalance).toBe(27708.75);
+
+    const expected = JSON.parse(await readFile(ICICI_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
     expect(result.statement).toEqual(expected.statement);
     expect(result.validation).toEqual(expected.validation);

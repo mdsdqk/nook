@@ -36,6 +36,12 @@ describe("parseIndianDate", () => {
   it("throws on unknown month abbreviation", () => {
     expect(() => parseIndianDate("01 Foo 2026")).toThrow();
   });
+
+  it("parses Month DD, YYYY", () => {
+    expect(parseIndianDate("July 19, 2026")).toBe("2026-07-19");
+    expect(parseIndianDate("July 27, 2026")).toBe("2026-07-27");
+    expect(parseIndianDate("Jan 1, 2026")).toBe("2026-01-01");
+  });
 });
 
 describe("toISODate", () => {

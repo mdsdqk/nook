@@ -4,6 +4,7 @@ import { IndusindIndieSavingsParser } from "./indusind/indie-savings";
 import { DbsDigisavingsParser } from "./dbs/digisavings";
 import { AxisSavingsParser } from "./axis/savings";
 import { RblSavingsParser } from "./rbl/savings";
+import { IciciSavingsParser } from "./icici/savings";
 import { HsbcSavingsParser } from "./hsbc/savings";
 
 type ParserKey = string;
@@ -43,6 +44,10 @@ const REGISTRY = new Map<ParserKey, () => StatementParser>([
   [
     makeKey("RBL", "savings", "v1", "savings"),
     () => new RblSavingsParser(),
+  ],
+  [
+    makeKey("ICICI", "savings", "v1", "savings"),
+    () => new IciciSavingsParser(),
   ],
   [
     makeKey("HSBC", "savings", "v1", "savings"),

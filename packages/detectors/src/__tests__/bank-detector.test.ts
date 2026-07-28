@@ -134,6 +134,32 @@ describe("BankDetector", () => {
     });
   });
 
+  it("detects ICICI savings", () => {
+    const doc = makeDoc(
+      "Statement of Transactions in Saving Account no. 123456789012 in INR for the period July 19, 2026 - July 27, 2026\nICICI BANK LIMITED\nTransaction Withdrawal Deposit Balance\nS No. Cheque Number Transaction Remarks\nwww.icici.bank.in\nTeam ICICI Bank",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "ICICI",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
+  it("does not detect ICICI from narration alone", () => {
+    const doc = makeDoc(
+      "HDFC BANK\nAccountNo : 50100123456789\nSAVINGS ACCOUNT\nStatement of account\nUPI/P2A/123/Paid v/ICICI BANK/www.icici.bank.in",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+  });
+
   it("detects HSBC savings", () => {
     const doc = makeDoc(
       "The Hongkong and Shanghai Banking Corporation Limited\nHSBC Bank\nAccount Number: 123456789012\nStatement of Account\nSavings Account\nIFSC Code: HSBC0000123\nwww.hsbc.co.in",

@@ -76,6 +76,22 @@ const PATTERNS: BankPattern[] = [
         /rblbank\.com/i.test(text)),
   },
   {
+    bank: "ICICI",
+    accountType: "savings",
+    variant: "savings",
+    formatVersion: "v1",
+    match: (text) =>
+      (/ICICI\s+BANK/i.test(text) ||
+        /Team\s+ICICI\s+Bank/i.test(text) ||
+        /www\.icici\.bank\.in/i.test(text) ||
+        /IFSC(?:\s*Code)?\s*:?\s*ICIC0[A-Z0-9]+/i.test(text)) &&
+      (/Statement\s+of\s+Transactions\s+in\s+Saving\s+Account\s+no/i.test(
+        text,
+      ) ||
+        (/Saving\s+Account\s+no\./i.test(text) &&
+          /Transaction\s+Remarks/i.test(text))),
+  },
+  {
     bank: "HSBC",
     accountType: "savings",
     variant: "savings",

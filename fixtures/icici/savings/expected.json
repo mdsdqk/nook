@@ -1,0 +1,159 @@
+{
+  "source": {
+    "path": "sample_data/savings/icici.pdf",
+    "contentHash": "3c496affa27f8f473dc379eb3cdc82dda951f03daf36cef1b93bcb28dce735da",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "ICICI",
+    "variant": "savings",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "ICICI",
+      "accountType": "savings",
+      "accountNumber": "233801507417",
+      "statementPeriod": {
+        "from": "2026-07-19",
+        "to": "2026-07-27"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 26694.95,
+    "closingBalance": 27708.75,
+    "transactions": [
+      {
+        "date": "2026-07-19",
+        "narration": "AKASH BISW UPI/AKASH BISW/9242197997@ybl/UPI/Punjab Nat/620097443993/ICIfbb2e7346d044ef294a7284 78381904b/",
+        "debit": 10,
+        "credit": null,
+        "balance": 26684.95,
+        "reference": "",
+        "sequence": 1
+      },
+      {
+        "date": "2026-07-19",
+        "narration": "Sri Vishnu UPI/Sri Vishnu/paytmqrdhpsp6m/UPI/YES BANK L/620047649617/ICI5205cceb3d794596b5fd868a6 e3146cb/",
+        "debit": 105,
+        "credit": null,
+        "balance": 26579.95,
+        "reference": "",
+        "sequence": 2
+      },
+      {
+        "date": "2026-07-20",
+        "narration": "Ramdev Med UPI/Ramdev Med/paytm.s2098sy@/UPI/YES BANK P/656719560744/ICI57f8d681970042dfa06fef5816 7f465c/",
+        "debit": 8,
+        "credit": null,
+        "balance": 26571.95,
+        "reference": "",
+        "sequence": 3
+      },
+      {
+        "date": "2026-07-21",
+        "narration": "CHAITHRA B UPI/CHAITHRA B/8749058456@ybl/UPI/State Bank/656867297931/ICIc44a0e2595554cbda7a592 de1f6fe43c/",
+        "debit": 5000,
+        "credit": null,
+        "balance": 21571.95,
+        "reference": "",
+        "sequence": 4
+      },
+      {
+        "date": "2026-07-21",
+        "narration": "KRISHNAVEN UPI/KRISHNAVEN/raghu1697.rc2@/UPI/UNION BANK/620295810258/ICI01a995d1fd324f07a35c6b 7ec3b1bfa8/",
+        "debit": 4000,
+        "credit": null,
+        "balance": 17571.95,
+        "reference": "",
+        "sequence": 5
+      },
+      {
+        "date": "2026-07-21",
+        "narration": "ANOWAR HUS UPI/ANOWAR HUS/q243177201@ybl/UPI/YES BANK L/620293902881/ICI0cbe863a228e4d0aab752f226 7a5f6fc/",
+        "debit": 850,
+        "credit": null,
+        "balance": 16721.95,
+        "reference": "",
+        "sequence": 6
+      },
+      {
+        "date": "2026-07-23",
+        "narration": "Amazon Pay UPI/Amazon Pay/amazonpaybalan/Request fr/Amazon RBL/620421889172/RBA019f8e20376d9d2a320b9",
+        "debit": 1000,
+        "credit": null,
+        "balance": 15721.95,
+        "reference": "",
+        "sequence": 7
+      },
+      {
+        "date": "2026-07-23",
+        "narration": "RAHUL MALL UPI/RAHUL MALL/9663098012@ybl/Payment fr/HDFC BANK/026923113381/YBL2259970a5c354acc9778 e45c7b3d7d70",
+        "debit": null,
+        "credit": 100000,
+        "balance": 115721.95,
+        "reference": "",
+        "sequence": 8
+      },
+      {
+        "date": "2026-07-25",
+        "narration": "Amazon Pay UPI/Amazon Pay/amazonpay@yapl/Request fr/YES BANK L/620625268724/APY019f98302192ba5e54555d5 7d2e42273",
+        "debit": 613.2,
+        "credit": null,
+        "balance": 115108.75,
+        "reference": "",
+        "sequence": 9
+      },
+      {
+        "date": "2026-07-25",
+        "narration": "ROHIT M KA UPI/ROHIT M KA/9845535649@pty/Sent using/KARNATAKA/211651724210/PTMA92BCB82 1DAB46579648B158519F8517",
+        "debit": null,
+        "credit": 2600,
+        "balance": 117708.75,
+        "reference": "",
+        "sequence": 10
+      },
+      {
+        "date": "2026-07-27",
+        "narration": "MOHAMMED S UPI/MOHAMMED S/md.sdq.k-1@oka/UPI/State Bank/620854301196/ICI662ce86d04c0484986f72d 92317fd007/",
+        "debit": 90000,
+        "credit": null,
+        "balance": 27708.75,
+        "reference": "",
+        "sequence": 11
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}
