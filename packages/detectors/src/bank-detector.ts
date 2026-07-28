@@ -95,6 +95,22 @@ const PATTERNS: BankPattern[] = [
     bank: "HSBC",
     accountType: "savings",
     variant: "savings",
+    formatVersion: "v2",
+    match: (text) =>
+      (/Hongkong\s+and\s+Shanghai\s+Banking\s+Corporation/i.test(text) ||
+        /\bHSBC\s+Account\s+Statement\b/i.test(text) ||
+        /hsbc\.co\.in/i.test(text)) &&
+      /Account\s+summary\s+and\s+transactions/i.test(text) &&
+      /Search\s+results/i.test(text) &&
+      /Date\s+range\s*:\s*\d{2}\/\d{2}\/\d{4}\s*-\s*\d{2}\/\d{2}\/\d{4}/i.test(
+        text,
+      ) &&
+      /Date\s+Description\s+Credit\s+Debit\s+Balance/i.test(text),
+  },
+  {
+    bank: "HSBC",
+    accountType: "savings",
+    variant: "savings",
     formatVersion: "v1",
     match: (text) =>
       (/Hongkong\s+and\s+Shanghai\s+Banking\s+Corporation/i.test(text) ||

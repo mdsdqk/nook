@@ -75,6 +75,10 @@ const KOTAK_EXPECTED = resolve(
   __dirname,
   "../../../../fixtures/kotak/811_savings/expected.json",
 );
+const HSBC_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/hsbc-savings.pdf",
+);
 
 describe("parseFile", () => {
   it("parses HDFC savings PDF matching golden fixture", async () => {
@@ -276,21 +280,27 @@ describe("parseFile", () => {
     expect(result.validation).toEqual(expected.validation);
   });
 
+  it("parses HSBC savings PDF", async () => {
+    const result = await parseFile(HSBC_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "HSBC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBeGreaterThan(0);
+    expect(result.statement!.openingBalance).toBe(342823.74);
+    expect(result.statement!.closingBalance).toBe(310280.07);
+  });
+
   it("returns error for non-existent file", async () => {
     const result = await parseFile("/does/not/exist.pdf");
     expect(result.errors.length).toBeGreaterThan(0);
     expect(result.errors[0]!.code).toBe("READ_ERROR");
   });
 
-  it("returns unknown bank for unsupported PDF", async () => {
-    const hsbcPdf = resolve(
-      __dirname,
-      "../../../../sample_data/savings/hsbc.pdf",
-    );
-    const result = await parseFile(hsbcPdf);
-    expect(result.errors.some((e) => e.code === "UNKNOWN_BANK")).toBe(
-      true,
-    );
-    expect(result.statement).toBeNull();
-  });
 });

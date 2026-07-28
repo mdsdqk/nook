@@ -173,6 +173,19 @@ describe("BankDetector", () => {
     });
   });
 
+  it("detects HSBC annual savings export as v2", () => {
+    const doc = makeDoc(
+      "HSBC Account Statement\nAccount summary and transactions\nSearch results\nDate range: 01/04/2025 - 31/03/2026\nDate Description Credit Debit Balance\nAccount number: 111-222333-444",
+    );
+    const result = detector.detect(doc);
+    expect(result).toEqual({
+      bank: "HSBC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v2",
+    });
+  });
+
   it("does not detect HSBC from narration alone", () => {
     const doc = makeDoc(
       "HDFC BANK\nAccountNo : 50100123456789\nSAVINGS ACCOUNT\nStatement of account\nUPI/P2A/123/Paid v/HSBC",

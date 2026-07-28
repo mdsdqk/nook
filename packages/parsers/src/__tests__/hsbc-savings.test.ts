@@ -33,20 +33,25 @@ function makeDoc(lines: string[]): ParsedDocument {
 describe("HsbcSavingsParser", () => {
   const parser = new HsbcSavingsParser();
 
-  it("parses a text-extractable HSBC India savings statement", () => {
+  it("parses HSBC savings layout with wrapped lines", () => {
     const doc = makeDoc([
-      "The Hongkong and Shanghai Banking Corporation Limited",
-      "HSBC Bank",
-      "Account Number: 012345678901",
-      "Statement of Account",
-      "Statement Period: 01/06/2026 to 30/06/2026",
-      "Currency: INR",
-      "Date Particulars Withdrawal Deposit Balance",
-      "Opening Balance 10000.00",
-      "15/06/2026 UPI/CRED/PAYMENT 2500.00 7500.00",
-      "30/06/2026 CREDIT INTEREST 12.50 7512.50",
-      "Closing Balance 7512.50",
-      "*** End of Statement ***",
+      "HSBC Premier Composite Statement",
+      "SAVINGS ACCOUNT-RES 133-057067-006",
+      "Date Transaction Details Deposits Withdrawals Balance",
+      "(DR=Debit)",
+      "INR",
+      "01Jun2026 BALANCE BROUGHT FORWARD 342,823.74",
+      "02Jun2026 UPI20260602000540936",
+      "651910462191",
+      "Mohammed Sadiq K 99,000.00 243,823.74",
+      "30Jun2026 IN22618139921961",
+      "ICICN22026063039921961",
+      "CONFLUX TECHNOLOGIES PRIVATE LIMITE",
+      "2026/06/30 144952 IN22618139921961 307,445.00 551,268.74",
+      "01Jul2026 CREDIT INTEREST",
+      "FROM APR26 TO JUN26 274.33 551,543.07",
+      "CLOSING BALANCE 551,543.07",
+      "Transaction Turnover 307,719.33 99,000.00",
     ]);
 
     const result = parser.parse(doc, DETECTION);
@@ -54,28 +59,37 @@ describe("HsbcSavingsParser", () => {
     expect(result.metadata).toEqual({
       bank: "HSBC",
       accountType: "savings",
-      accountNumber: "012345678901",
-      statementPeriod: { from: "01/06/2026", to: "30/06/2026" },
+      accountNumber: "133-057067-006",
+      statementPeriod: { from: "02 Jun 2026", to: "01 Jul 2026" },
       currency: "INR",
     });
-    expect(result.openingBalance).toBe(10000);
-    expect(result.closingBalance).toBe(7512.5);
-    expect(result.transactions).toHaveLength(2);
+    expect(result.openingBalance).toBe(342823.74);
+    expect(result.closingBalance).toBe(551543.07);
+    expect(result.transactions).toHaveLength(3);
     expect(result.transactions[0]).toMatchObject({
-      date: "15/06/2026",
-      narration: "UPI/CRED/PAYMENT",
-      debit: 2500,
+      date: "02 Jun 2026",
+      narration: "UPI20260602000540936 651910462191 Mohammed Sadiq K",
+      debit: 99000,
       credit: null,
-      balance: 7500,
+      balance: 243823.74,
       sequence: 1,
     });
     expect(result.transactions[1]).toMatchObject({
-      date: "30/06/2026",
-      narration: "CREDIT INTEREST",
+      date: "30 Jun 2026",
+      narration:
+        "IN22618139921961 ICICN22026063039921961 CONFLUX TECHNOLOGIES PRIVATE LIMITE 2026/06/30 144952 IN22618139921961",
       debit: null,
-      credit: 12.5,
-      balance: 7512.5,
+      credit: 307445,
+      balance: 551268.74,
       sequence: 2,
+    });
+    expect(result.transactions[2]).toMatchObject({
+      date: "01 Jul 2026",
+      narration: "CREDIT INTEREST FROM APR26 TO JUN26",
+      debit: null,
+      credit: 274.33,
+      balance: 551543.07,
+      sequence: 3,
     });
   });
 });
