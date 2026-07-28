@@ -37,7 +37,7 @@ describe("Kotak811SavingsParser", () => {
     const doc = makeDoc([
       "Account Statement",
       "01 Jul 2026 - 26 Jul 2026",
-      "Account No. 9847430322",
+      "Account No. 9800000001",
       "Account Type  Savings",
       "CRN xxxxxx120",
       "Currency INDIAN RUPEE",
@@ -61,7 +61,7 @@ describe("Kotak811SavingsParser", () => {
     expect(result.metadata).toEqual({
       bank: "KOTAK",
       accountType: "savings",
-      accountNumber: "9847430322",
+      accountNumber: "9800000001",
       statementPeriod: {
         from: "01 Jul 2026",
         to: "26 Jul 2026",
@@ -95,7 +95,7 @@ describe("Kotak811SavingsParser", () => {
     const doc = makeDoc([
       "Account Statement",
       "01 Jul 2026 - 26 Jul 2026",
-      "Account No. 9847430322",
+      "Account No. 9800000001",
       "Currency INDIAN RUPEE",
       "IFSC Code KKBK0008054",
       "Savings Account Transactions",

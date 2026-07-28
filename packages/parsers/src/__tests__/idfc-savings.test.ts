@@ -36,7 +36,7 @@ describe("IdfcSavingsParser", () => {
   it("parses IDFC savings statement with prefix and suffix narration wraps", () => {
     const doc = makeDoc([
       "STATEMENT OF ACCOUNT",
-      "ACCOUNT NO                      :    10215956093",
+      "ACCOUNT NO                      :    10000000001",
       "STATEMENT PERIOD          :    2026-07-01 TO 2026-07-27",
       "IFSC: IDFB0080157",
       "ACCOUNT TYPE: CorpSal Platinum Plus",
@@ -49,14 +49,14 @@ describe("IdfcSavingsParser", () => {
       "Opening Balance 14,006.35",
       "NEFT/",
       "HSBCN18362592383/MR",
-      "MOHAMMED SADIQ K/",
+      "SAMPLE USER K/",
       "HSBC0560003/MR",
-      "MOHAMMED SADIQ",
+      "SAMPLE USER",
       "02-Jul-2026 02-Jul-2026 K121,1ST 60,000.00 74,006.35",
       "FLOOR,GOLDEN",
       "CORNER APTS",
-      "BELLANDUR GATERD",
-      "BELLANDUR,BENGALURU560103/",
+      "SAMPLE DISTRICT",
+      "SAMPLE CITY,STATE560001/",
       "IN",
       "NACH/HDFC BANK",
       "05-Jul-2026 05-Jul-2026 49,425.00 24,581.35",
@@ -70,7 +70,7 @@ describe("IdfcSavingsParser", () => {
     expect(result.metadata).toEqual({
       bank: "IDFC",
       accountType: "savings",
-      accountNumber: "10215956093",
+      accountNumber: "10000000001",
       statementPeriod: {
         from: "2026-07-01",
         to: "2026-07-27",
@@ -83,7 +83,7 @@ describe("IdfcSavingsParser", () => {
     expect(result.transactions[0]).toMatchObject({
       date: "02-Jul-2026",
       narration:
-        "NEFT/ HSBCN18362592383/MR MOHAMMED SADIQ K/ HSBC0560003/MR MOHAMMED SADIQ K121,1ST FLOOR,GOLDEN CORNER APTS BELLANDUR GATERD BELLANDUR,BENGALURU560103/ IN",
+        "NEFT/ HSBCN18362592383/MR SAMPLE USER K/ HSBC0560003/MR SAMPLE USER K121,1ST FLOOR,GOLDEN CORNER APTS SAMPLE DISTRICT SAMPLE CITY,STATE560001/ IN",
       debit: null,
       credit: 60000,
       balance: 74006.35,

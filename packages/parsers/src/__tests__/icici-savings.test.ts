@@ -35,18 +35,18 @@ describe("IciciSavingsParser", () => {
 
   it("parses ICICI savings statement with prefix names and UPI wrap", () => {
     const doc = makeDoc([
-      "Statement of Transactions in Saving Account no. 233801507417 in INR for the period July 19, 2026 - July 27, 2026",
+      "Statement of Transactions in Saving Account no. 233800000001 in INR for the period July 19, 2026 - July 27, 2026",
       "ICICI BANK LIMITED",
       "Transaction Withdrawal Deposit Balance",
       "S No. Cheque Number Transaction Remarks",
       "Date Amount (INR) Amount (INR) (INR)",
-      "AKASH BISW",
+      "SAMPLE ONE",
       "1 19.07.2026 10.00 26684.95",
-      "UPI/AKASH BISW/9242197997@ybl/UPI/Punjab",
+      "UPI/SAMPLE ONE/9000000001@ybl/UPI/Punjab",
       "Nat/620097443993/",
-      "RAHUL MALL",
+      "SAMPLE TWO",
       "2 23.07.2026 100000.00 115721.95",
-      "UPI/RAHUL MALL/9663098012@ybl/Payment fr/HDFC",
+      "UPI/SAMPLE TWO/9000000002@ybl/Payment fr/HDFC",
       "www.icici.bank.in Dial your Bank 1800-1080",
       "Team ICICI Bank",
     ]);
@@ -56,7 +56,7 @@ describe("IciciSavingsParser", () => {
     expect(result.metadata).toEqual({
       bank: "ICICI",
       accountType: "savings",
-      accountNumber: "233801507417",
+      accountNumber: "233800000001",
       statementPeriod: {
         from: "July 19, 2026",
         to: "July 27, 2026",
@@ -69,7 +69,7 @@ describe("IciciSavingsParser", () => {
     expect(result.transactions[0]).toMatchObject({
       date: "19.07.2026",
       narration:
-        "AKASH BISW UPI/AKASH BISW/9242197997@ybl/UPI/Punjab Nat/620097443993/",
+        "SAMPLE ONE UPI/SAMPLE ONE/9000000001@ybl/UPI/Punjab Nat/620097443993/",
       debit: 10,
       credit: null,
       balance: 26684.95,
@@ -78,7 +78,7 @@ describe("IciciSavingsParser", () => {
     expect(result.transactions[1]).toMatchObject({
       date: "23.07.2026",
       narration:
-        "RAHUL MALL UPI/RAHUL MALL/9663098012@ybl/Payment fr/HDFC",
+        "SAMPLE TWO UPI/SAMPLE TWO/9000000002@ybl/Payment fr/HDFC",
       debit: null,
       credit: 100000,
       balance: 115721.95,

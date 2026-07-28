@@ -39,14 +39,14 @@ describe("HdfcSavingsParser", () => {
   it("parses a single-page statement with summary", () => {
     const doc = makeDoc([
       [
-        "AccountNo : 50100684583830",
+        "AccountNo : 50000000000001",
         "Currency : INR",
         "AccountType : SAVINGSA/C-SBMAX(193)",
         "From : 01/06/2026 To : 30/06/2026Statementofaccount",
         "Date Narration Chq./Ref.No. ValueDt WithdrawalAmt. DepositAmt. ClosingBalance",
         "17/06/26 JNS-PMSBY-26-27-00383361254-865_DAP 0000SBYNL1727176 17/06/26 20.00 27,361.41",
-        "28/06/26 UPI-MOHAMMEDSADIQ 0000654500284418 28/06/26 40,000.00 41,925.41",
-        "K-9632740312@YESCRED-",
+        "28/06/26 UPI-SAMPLEUSER 0000654500284418 28/06/26 40,000.00 41,925.41",
+        "K-9000000001@YESCRED-",
         "UTIB0005157-654500284418-PAIDVIACRED",
         "STATEMENTSUMMARY :-",
         "OpeningBalance DrCount CrCount Debits Credits ClosingBal",
@@ -70,7 +70,7 @@ describe("HdfcSavingsParser", () => {
     });
     expect(result.transactions[1]).toMatchObject({
       date: "28/06/2026",
-      narration: expect.stringContaining("UPI-MOHAMMEDSADIQ"),
+      narration: expect.stringContaining("UPI-SAMPLEUSER"),
       debit: null,
       credit: 40000,
       balance: 41925.41,
@@ -83,7 +83,7 @@ describe("HdfcSavingsParser", () => {
     // Balances are deliberately contiguous so debit/credit inference is stable.
     const doc = makeDoc([
       [
-        "AccountNo : 50100343141718",
+        "AccountNo : 50000000000002",
         "Currency : INR",
         "AccountType : SAVINGS-RESIDENTS(113)",
         "From : 01/04/2025 To : 31/03/2026Statementofaccount",
@@ -98,17 +98,17 @@ describe("HdfcSavingsParser", () => {
       ],
       [
         "PageNo.:2",
-        "AccountNo : 50100343141718",
+        "AccountNo : 50000000000002",
         "From : 01/04/2025 To : 31/03/2026Statementofaccount",
-        "07/04/25 UPI-PRADEEPM 0000102741316212 07/04/25 70.00 28,408.57",
+        "07/04/25 UPI-SAMPLEPM 0000102741316212 07/04/25 70.00 28,408.57",
         "S-BHARATPE9A0R7V2H8N971833",
-        "10/04/25 UPI-KHAJA 0000102943188593 10/04/25 69.00 28,339.57",
+        "10/04/25 UPI-SAMPLEX 0000102943188593 10/04/25 69.00 28,339.57",
         "HDFCBANKLIMITED",
         "*Closingbalanceincludesfundsearmarkedforholdandunclearedfunds",
       ],
       [
         "PageNo.:3",
-        "AccountNo : 50100343141718",
+        "AccountNo : 50000000000002",
         "From : 01/04/2025 To : 31/03/2026Statementofaccount",
         "31/03/26 UPI-SWIGGY 0000645615118964 31/03/26 207.00 28,132.57",
         "01/04/26 INTERESTPAIDTILL31-MAR-2026 000000000000000 31/03/26 831.00 28,963.57",
@@ -172,7 +172,7 @@ describe("HdfcSavingsParser", () => {
   it("normalizes all-zero Chq./Ref.No. to an empty reference", () => {
     const doc = makeDoc([
       [
-        "AccountNo : 50100343141718",
+        "AccountNo : 50000000000002",
         "Currency : INR",
         "AccountType : SAVINGS-RESIDENTS(113)",
         "From : 01/04/2025 To : 31/03/2026Statementofaccount",

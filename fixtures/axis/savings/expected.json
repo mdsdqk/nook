@@ -14,7 +14,7 @@
     "metadata": {
       "bank": "AXIS",
       "accountType": "savings",
-      "accountNumber": "5504885812",
+      "accountNumber": "5500000001",
       "statementPeriod": {
         "from": "2026-04-27",
         "to": "2026-07-27"
@@ -35,7 +35,7 @@
       },
       {
         "date": "2026-05-23",
-        "narration": "UPI/P2A/650925900101/MOHAMMED SADIQ K /Paid v/State Bank Of India",
+        "narration": "UPI/P2A/650925900101/SAMPLE USER K /Paid v/State Bank Of India",
         "debit": 60000,
         "credit": null,
         "balance": 61066.27,
@@ -80,7 +80,7 @@
       },
       {
         "date": "2026-06-28",
-        "narration": "UPI/P2A/654500284418/MOHAMMED SADIQ K /Paid v/HDFC BANK LTD",
+        "narration": "UPI/P2A/654500284418/SAMPLE USER K /Paid v/HDFC BANK LTD",
         "debit": 40000,
         "credit": null,
         "balance": 210066.27,
@@ -89,7 +89,7 @@
       },
       {
         "date": "2026-07-01",
-        "narration": "SB:5504885812:Int.Pd:01-04-2026 to 30-06-2026",
+        "narration": "SB:5500000001:Int.Pd:01-04-2026 to 30-06-2026",
         "debit": null,
         "credit": 853,
         "balance": 210919.27,
@@ -98,7 +98,7 @@
       },
       {
         "date": "2026-07-02",
-        "narration": "UPI/P2A/654949796581/RUQAIYANAAZ KITTUR /Paid v/HDFC BANK LTD",
+        "narration": "UPI/P2A/654949796581/SAMPLE PAYEE /Paid v/HDFC BANK LTD",
         "debit": 100000,
         "credit": null,
         "balance": 110919.27,

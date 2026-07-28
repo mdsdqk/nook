@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parseFile } from "../parse-file";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import type { ParsedStatement } from "@nook/contracts";
 
 const HDFC_PDF = resolve(
   __dirname,
@@ -80,6 +81,27 @@ const HSBC_PDF = resolve(
   "../../../../sample_data/savings/hsbc-savings.pdf",
 );
 
+function redactStatementForFixtureComparison(
+  statement: ParsedStatement | null | undefined,
+): ParsedStatement | null {
+  if (!statement) {
+    return null;
+  }
+
+  return {
+    ...statement,
+    metadata: {
+      ...statement.metadata,
+      accountNumber: "__REDACTED_ACCOUNT__",
+    },
+    transactions: statement.transactions.map((txn) => ({
+      ...txn,
+      narration: "__REDACTED_NARRATION__",
+      reference: txn.reference ? "__REDACTED_REFERENCE__" : "",
+    })),
+  };
+}
+
 describe("parseFile", () => {
   it("parses HDFC savings PDF matching golden fixture", async () => {
     const result = await parseFile(HDFC_PDF);
@@ -100,7 +122,9 @@ describe("parseFile", () => {
     // Match golden fixture (excluding source.path which differs)
     const expected = JSON.parse(await readFile(HDFC_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -122,7 +146,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(INDIE_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -144,7 +170,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(DBS_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -166,7 +194,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(AXIS_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -188,7 +218,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(RBL_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -210,7 +242,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(ICICI_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -232,7 +266,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(IDFC_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -254,7 +290,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(SBI_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 
@@ -276,7 +314,9 @@ describe("parseFile", () => {
 
     const expected = JSON.parse(await readFile(KOTAK_EXPECTED, "utf-8"));
     expect(result.detection).toEqual(expected.detection);
-    expect(result.statement).toEqual(expected.statement);
+    expect(redactStatementForFixtureComparison(result.statement)).toEqual(
+      redactStatementForFixtureComparison(expected.statement),
+    );
     expect(result.validation).toEqual(expected.validation);
   });
 

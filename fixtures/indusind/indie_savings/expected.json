@@ -14,7 +14,7 @@
     "metadata": {
       "bank": "INDUSIND",
       "accountType": "indie_savings",
-      "accountNumber": "188088694386",
+      "accountNumber": "188000000001",
       "statementPeriod": {
         "from": "2026-04-27",
         "to": "2026-07-27"
@@ -35,7 +35,7 @@
       },
       {
         "date": "2026-05-01",
-        "narration": "UPI/612124483697/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "narration": "UPI/612124483697/CR/SAMPLE/HDFC/sample-1@okaxis/UPI",
         "debit": null,
         "credit": 50000,
         "balance": 350530.69,
@@ -44,7 +44,7 @@
       },
       {
         "date": "2026-05-06",
-        "narration": "UPI/122677104030/CR/RUQA/HDFC/6968@okhdfcbank/UPI",
+        "narration": "UPI/122677104030/CR/SAMPLE/HDFC/0000@okhdfcbank/UPI",
         "debit": null,
         "credit": 50000,
         "balance": 400530.69,
@@ -53,7 +53,7 @@
       },
       {
         "date": "2026-05-27",
-        "narration": "UPI/651340067420/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "narration": "UPI/651340067420/CR/SAMPLE/HDFC/sample-1@okaxis/UPI",
         "debit": null,
         "credit": 50000,
         "balance": 450530.69,
@@ -62,7 +62,7 @@
       },
       {
         "date": "2026-06-30",
-        "narration": "188088694386:Int.Pd:01-04-2026 to 30-06-2026",
+        "narration": "188000000001:Int.Pd:01-04-2026 to 30-06-2026",
         "debit": null,
         "credit": 2745,
         "balance": 453275.69,
@@ -71,7 +71,7 @@
       },
       {
         "date": "2026-07-06",
-        "narration": "UPI/618734585830/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "narration": "UPI/618734585830/CR/SAMPLE/HDFC/sample-1@okaxis/UPI",
         "debit": null,
         "credit": 25000,
         "balance": 478275.69,
@@ -80,7 +80,7 @@
       },
       {
         "date": "2026-07-07",
-        "narration": "UPI/655479090370/CR/RUQA/HDFC/ku6968-2@okaxis/UPI",
+        "narration": "UPI/655479090370/CR/SAMPLE/HDFC/sample-1@okaxis/UPI",
         "debit": null,
         "credit": 30000,
         "balance": 508275.69,
@@ -89,7 +89,7 @@
       },
       {
         "date": "2026-07-26",
-        "narration": "UPI/126914791355/CR/RUQA/HDFC/6968@okhdfcbank/UPI",
+        "narration": "UPI/126914791355/CR/SAMPLE/HDFC/0000@okhdfcbank/UPI",
         "debit": null,
         "credit": 50000,
         "balance": 558275.69,

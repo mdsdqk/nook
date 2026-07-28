@@ -14,7 +14,7 @@
     "metadata": {
       "bank": "SBI",
       "accountType": "savings",
-      "accountNumber": "64098746129",
+      "accountNumber": "64000000001",
       "statementPeriod": {
         "from": "2026-07-01",
         "to": "2026-07-27"
@@ -44,7 +44,7 @@
       },
       {
         "date": "2026-07-02",
-        "narration": "DEP TFR NEFT*HSBC0560003*HSBCN1836 2592614*MR MOHAMMED SAD 0099509044300 AT 10363 SARJAPURA ROAD",
+        "narration": "DEP TFR NEFT*HSBC0560003*HSBCN1836 2592614*MR SAMPLE USER 0099509044300 AT 10363 SAMPLE ROAD",
         "debit": null,
         "credit": 100000,
         "balance": 204450.87,
@@ -98,7 +98,7 @@
       },
       {
         "date": "2026-07-13",
-        "narration": "DEP TFR UPI/CR/619408797365/SHARAN A/HDFC/sharanahuj/UPI 0097732162091 AT 10363 SARJAPURA ROAD",
+        "narration": "DEP TFR UPI/CR/619408797365/SAMPLE A/HDFC/samplehandle/UPI 0097732162091 AT 10363 SAMPLE ROAD",
         "debit": null,
         "credit": 8275,
         "balance": 115112.11,
@@ -107,7 +107,7 @@
       },
       {
         "date": "2026-07-16",
-        "narration": "DEP TFR UPI/CR/656305129985/MOHAMME D/ICIC/9632740312/Paid 0097735162098 AT 10363 SARJAPURA ROAD",
+        "narration": "DEP TFR UPI/CR/656305129985/SAMPLE D/ICIC/9000000002/Paid 0097735162098 AT 10363 SAMPLE ROAD",
         "debit": null,
         "credit": 40000,
         "balance": 155112.11,
@@ -179,7 +179,7 @@
       },
       {
         "date": "2026-07-27",
-        "narration": "DEP TFR UPI/CR/620854301196/MOHAMME D/ICIC/md.sdq.k-1/UPI 0097732162091 AT 10363 SARJAPURA ROAD",
+        "narration": "DEP TFR UPI/CR/620854301196/SAMPLE D/ICIC/sample.user-1/UPI 0097732162091 AT 10363 SAMPLE ROAD",
         "debit": null,
         "credit": 90000,
         "balance": 92556.35,
