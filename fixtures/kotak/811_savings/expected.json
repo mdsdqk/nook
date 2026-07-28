@@ -1,0 +1,59 @@
+{
+  "source": {
+    "path": "sample_data/savings/kotak-811.pdf",
+    "contentHash": "878035a06b0c3fc72db47d8ac3ada6fb7c2c7a0177dd05a9715f4a389adac34e",
+    "format": "pdf"
+  },
+  "detection": {
+    "bank": "KOTAK",
+    "variant": "811",
+    "accountType": "savings",
+    "formatVersion": "v1"
+  },
+  "statement": {
+    "metadata": {
+      "bank": "KOTAK",
+      "accountType": "savings",
+      "accountNumber": "9847430322",
+      "statementPeriod": {
+        "from": "2026-07-01",
+        "to": "2026-07-26"
+      },
+      "currency": "INR"
+    },
+    "openingBalance": 35940.39,
+    "closingBalance": 35940.39,
+    "transactions": []
+  },
+  "validation": {
+    "passed": true,
+    "entries": [
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Bank name present"
+      },
+      {
+        "category": "structural",
+        "passed": true,
+        "message": "Statement period present"
+      },
+      {
+        "category": "financial",
+        "passed": true,
+        "message": "Opening + Credits - Debits = Closing"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "All transactions within statement period"
+      },
+      {
+        "category": "semantic",
+        "passed": true,
+        "message": "No duplicate references"
+      }
+    ]
+  },
+  "errors": []
+}

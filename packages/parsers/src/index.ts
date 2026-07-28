@@ -6,3 +6,6 @@ export { AxisSavingsParser } from "./axis/savings";
 export { RblSavingsParser } from "./rbl/savings";
 export { IciciSavingsParser } from "./icici/savings";
 export { HsbcSavingsParser } from "./hsbc/savings";
+export { IdfcSavingsParser } from "./idfc/savings";
+export { SbiSavingsParser } from "./sbi/savings";
+export { Kotak811SavingsParser } from "./kotak/811-savings";

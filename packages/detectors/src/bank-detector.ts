@@ -105,6 +105,47 @@ const PATTERNS: BankPattern[] = [
         /Account\s+Statement/i.test(text) ||
         /Savings\s+Account/i.test(text)),
   },
+  {
+    bank: "IDFC",
+    accountType: "savings",
+    variant: "savings",
+    formatVersion: "v1",
+    match: (text) =>
+      (/IDFC\s+FIRST\s+BANK/i.test(text) ||
+        /idfcfirstbank\.com/i.test(text) ||
+        /IFSC(?:\s*:)?\s*IDFB0[A-Z0-9]+/i.test(text) ||
+        /banker@idfcfirstbank\.com/i.test(text)) &&
+      (/STATEMENT\s+OF\s+ACCOUNT/i.test(text) ||
+        (/ACCOUNT\s+NO\b/i.test(text) &&
+          /STATEMENT\s+PERIOD/i.test(text))),
+  },
+  {
+    bank: "SBI",
+    accountType: "savings",
+    variant: "savings",
+    formatVersion: "v1",
+    match: (text) =>
+      (/State\s+Bank\s+of\s+India/i.test(text) ||
+        /sbi\.co\.in/i.test(text) ||
+        /IFSC(?:\s*Code)?\s*:?\s*SBIN0[A-Z0-9]+/i.test(text) ||
+        /sbi\.\d+@sbi\.co\.in/i.test(text)) &&
+      (/STATEMENT\s+OF\s+ACCOUNT/i.test(text) ||
+        (/Account\s+Number\s*:/i.test(text) &&
+          /Statement\s+From\s*:/i.test(text))),
+  },
+  {
+    bank: "KOTAK",
+    accountType: "savings",
+    variant: "811",
+    formatVersion: "v1",
+    match: (text) =>
+      (/Kotak\s+Mahindra\s+Bank/i.test(text) ||
+        /kotak\.bank\.in/i.test(text) ||
+        /IFSC(?:\s*Code)?\s*:?\s*KKBK0[A-Z0-9]+/i.test(text) ||
+        /\bCRN\s+x+/i.test(text)) &&
+      (/Account\s+Statement/i.test(text) ||
+        /Savings\s+Account\s+Transactions/i.test(text)),
+  },
 ];
 
 export class BankDetector implements Detector {

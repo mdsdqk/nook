@@ -51,6 +51,30 @@ const ICICI_EXPECTED = resolve(
   __dirname,
   "../../../../fixtures/icici/savings/expected.json",
 );
+const IDFC_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/idfc.pdf",
+);
+const IDFC_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/idfc/savings/expected.json",
+);
+const SBI_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/sbi.pdf",
+);
+const SBI_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/sbi/savings/expected.json",
+);
+const KOTAK_PDF = resolve(
+  __dirname,
+  "../../../../sample_data/savings/kotak-811.pdf",
+);
+const KOTAK_EXPECTED = resolve(
+  __dirname,
+  "../../../../fixtures/kotak/811_savings/expected.json",
+);
 
 describe("parseFile", () => {
   it("parses HDFC savings PDF matching golden fixture", async () => {
@@ -186,6 +210,72 @@ describe("parseFile", () => {
     expect(result.validation).toEqual(expected.validation);
   });
 
+  it("parses IDFC savings PDF matching golden fixture", async () => {
+    const result = await parseFile(IDFC_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "IDFC",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(2);
+    expect(result.statement!.openingBalance).toBe(14006.35);
+    expect(result.statement!.closingBalance).toBe(24581.35);
+
+    const expected = JSON.parse(await readFile(IDFC_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
+  it("parses SBI savings PDF matching golden fixture", async () => {
+    const result = await parseFile(SBI_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "SBI",
+      accountType: "savings",
+      variant: "savings",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(19);
+    expect(result.statement!.openingBalance).toBe(134095.09);
+    expect(result.statement!.closingBalance).toBe(42606.35);
+
+    const expected = JSON.parse(await readFile(SBI_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
+  it("parses Kotak 811 savings PDF matching golden fixture", async () => {
+    const result = await parseFile(KOTAK_PDF);
+
+    expect(result.errors).toEqual([]);
+    expect(result.detection).toEqual({
+      bank: "KOTAK",
+      accountType: "savings",
+      variant: "811",
+      formatVersion: "v1",
+    });
+    expect(result.validation?.passed).toBe(true);
+    expect(result.statement).not.toBeNull();
+    expect(result.statement!.transactions.length).toBe(0);
+    expect(result.statement!.openingBalance).toBe(35940.39);
+    expect(result.statement!.closingBalance).toBe(35940.39);
+
+    const expected = JSON.parse(await readFile(KOTAK_EXPECTED, "utf-8"));
+    expect(result.detection).toEqual(expected.detection);
+    expect(result.statement).toEqual(expected.statement);
+    expect(result.validation).toEqual(expected.validation);
+  });
+
   it("returns error for non-existent file", async () => {
     const result = await parseFile("/does/not/exist.pdf");
     expect(result.errors.length).toBeGreaterThan(0);
@@ -193,11 +283,11 @@ describe("parseFile", () => {
   });
 
   it("returns unknown bank for unsupported PDF", async () => {
-    const sbiPdf = resolve(
+    const hsbcPdf = resolve(
       __dirname,
-      "../../../../sample_data/savings/sbi.pdf",
+      "../../../../sample_data/savings/hsbc.pdf",
     );
-    const result = await parseFile(sbiPdf);
+    const result = await parseFile(hsbcPdf);
     expect(result.errors.some((e) => e.code === "UNKNOWN_BANK")).toBe(
       true,
     );
