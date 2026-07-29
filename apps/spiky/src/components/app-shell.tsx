@@ -1,0 +1,196 @@
+import { useEffect, useId, useRef, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Wallet,
+  PieChart,
+  CreditCard,
+  Sparkles,
+  Settings,
+  LogOut,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+
+type NavItem = {
+  label: string;
+  icon: LucideIcon;
+  to?: string;
+  badge?: string;
+};
+
+const navItems: NavItem[] = [
+  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+  { label: "Money", icon: Wallet },
+  { label: "Wealth", icon: PieChart },
+  { label: "Debt", icon: CreditCard },
+  { label: "Intelligence", icon: Sparkles, badge: "AI" },
+];
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
+}
+
+export function AppShell() {
+  const { session, logout } = useAuth();
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function onPointerDown(event: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  function handleLogout() {
+    setMenuOpen(false);
+    logout();
+    navigate("/login", { replace: true });
+  }
+
+  const displayName = session?.name ?? session?.username ?? "User";
+
+  return (
+    <div className="flex min-h-screen bg-canvas text-on-surface">
+      <aside className="flex w-60 shrink-0 flex-col border-r border-white/5 bg-surface-container-low">
+        <div className="flex items-center gap-3 px-5 py-5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-body-sm font-semibold text-white">
+            N
+          </div>
+          <span className="text-title-md font-medium text-white">Nook</span>
+        </div>
+
+        <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Main">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const badge = item.badge ? (
+              <span
+                className={cn(
+                  "ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium",
+                  item.to
+                    ? "bg-primary/20 text-primary"
+                    : "bg-primary/10 text-primary/60",
+                )}
+              >
+                {item.badge}
+              </span>
+            ) : null;
+
+            if (item.to) {
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2.5 text-body-sm transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-on-surface/70 hover:bg-white/5 hover:text-on-surface",
+                    )
+                  }
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                  <span>{item.label}</span>
+                  {badge}
+                </NavLink>
+              );
+            }
+
+            return (
+              <span
+                key={item.label}
+                className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-body-sm text-on-surface/40"
+                aria-disabled="true"
+              >
+                <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                <span>{item.label}</span>
+                {badge}
+              </span>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto border-t border-white/5 px-3 py-3">
+          <button
+            type="button"
+            className="mb-1 flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-body-sm text-on-surface/70"
+            disabled
+          >
+            <Settings className="h-4 w-4 shrink-0" aria-hidden />
+            Settings
+          </button>
+
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-white/5"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-controls={menuId}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary-container text-body-sm font-medium text-on-secondary-container">
+                {initials(displayName)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-body-sm font-medium text-white">
+                  {displayName}
+                </span>
+                <span className="block truncate text-label-caps text-on-surface/40">
+                  @{session?.username}
+                </span>
+              </span>
+            </button>
+
+            {menuOpen ? (
+              <div
+                id={menuId}
+                role="menu"
+                className="glass-float absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-md"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-body-sm text-on-surface hover:bg-white/5"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" aria-hidden />
+                  Log out
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Outlet />
+      </div>
+    </div>
+  );
+}

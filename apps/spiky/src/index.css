@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+@theme {
+  /* Surfaces */
+  --color-surface: #111317;
+  --color-surface-dim: #111317;
+  --color-surface-bright: #37393e;
+  --color-surface-container-lowest: #0c0e12;
+  --color-surface-container-low: #1a1c20;
+  --color-surface-container: #1e2024;
+  --color-surface-container-high: #282a2e;
+  --color-surface-container-highest: #333539;
+  --color-surface-variant: #333539;
+  --color-on-surface: #e2e2e8;
+  --color-on-surface-variant: #cbc3d7;
+  --color-inverse-surface: #e2e2e8;
+  --color-inverse-on-surface: #2f3035;
+  --color-outline: #958ea0;
+  --color-outline-variant: #494454;
+  --color-surface-tint: #d0bcff;
+
+  /* Primary — Electric Purple */
+  --color-primary: #d0bcff;
+  --color-on-primary: #3c0091;
+  --color-primary-container: #a078ff;
+  --color-on-primary-container: #340080;
+  --color-inverse-primary: #6d3bd7;
+  --color-primary-fixed: #e9ddff;
+  --color-primary-fixed-dim: #d0bcff;
+  --color-on-primary-fixed: #23005c;
+  --color-on-primary-fixed-variant: #5516be;
+
+  /* Secondary — Emerald */
+  --color-secondary: #4edea3;
+  --color-on-secondary: #003824;
+  --color-secondary-container: #00a572;
+  --color-on-secondary-container: #00311f;
+  --color-secondary-fixed: #6ffbbe;
+  --color-secondary-fixed-dim: #4edea3;
+  --color-on-secondary-fixed: #002113;
+  --color-on-secondary-fixed-variant: #005236;
+
+  /* Tertiary — Soft Blue */
+  --color-tertiary: #adc6ff;
+  --color-on-tertiary: #002e6a;
+  --color-tertiary-container: #4d8eff;
+  --color-on-tertiary-container: #00285d;
+  --color-tertiary-fixed: #d8e2ff;
+  --color-tertiary-fixed-dim: #adc6ff;
+  --color-on-tertiary-fixed: #001a42;
+  --color-on-tertiary-fixed-variant: #004395;
+
+  /* Error */
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+
+  /* Canvas */
+  --color-background: #111317;
+  --color-on-background: #e2e2e8;
+  --color-canvas: #050505;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-DEFAULT: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Spacing (8px rhythm) */
+  --spacing-stack-sm: 12px;
+  --spacing-stack-md: 24px;
+  --spacing-stack-lg: 48px;
+  --spacing-gutter: 24px;
+  --spacing-container: 32px;
+
+  /* Typography families */
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Type scale */
+  --text-display-xl: 48px;
+  --text-display-xl--line-height: 56px;
+  --text-display-xl--letter-spacing: -0.04em;
+  --text-display-xl--font-weight: 700;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 600;
+
+  --text-headline-lg-mobile: 24px;
+  --text-headline-lg-mobile--line-height: 32px;
+  --text-headline-lg-mobile--font-weight: 600;
+
+  --text-title-md: 20px;
+  --text-title-md--line-height: 28px;
+  --text-title-md--font-weight: 500;
+
+  --text-body-base: 16px;
+  --text-body-base--line-height: 24px;
+  --text-body-base--font-weight: 400;
+
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
+
+  --text-label-caps: 12px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.05em;
+  --text-label-caps--font-weight: 500;
+}
+
+/* Glass elevation — Level 1: cards/containers */
+@utility glass-1 {
+  background-color: rgb(255 255 255 / 0.03);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Glass elevation — Level 2: active/hover with primary glow */
+@utility glass-2 {
+  background-color: rgb(255 255 255 / 0.05);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 0 20px rgb(208 188 255 / 0.15);
+}
+
+/* Glass elevation — floating: modals/tooltips */
+@utility glass-float {
+  background-color: rgb(17 19 23 / 0.85);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  backdrop-filter: blur(80px);
+  -webkit-backdrop-filter: blur(80px);
+}
+
+@utility text-label-caps {
+  font-family: var(--font-mono);
+  font-size: var(--text-label-caps);
+  line-height: var(--text-label-caps--line-height);
+  letter-spacing: var(--text-label-caps--letter-spacing);
+  font-weight: var(--text-label-caps--font-weight);
+  text-transform: uppercase;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    border-color: var(--color-outline-variant);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-on-surface);
+    font-family: var(--font-sans);
+    font-size: var(--text-body-base);
+    line-height: var(--text-body-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

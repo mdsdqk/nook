@@ -6,6 +6,7 @@
     "dev": "turbo run dev",
     "dev:mobile": "turbo run dev --filter=@nook/mobile",
     "dev:web": "turbo run dev --filter=@nook/web",
+    "dev:spiky": "turbo run dev --filter=@nook/spiky",
     "dev:convex": "turbo run dev --filter=@nook/convex",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
