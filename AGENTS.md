@@ -26,3 +26,4 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 
 ### Web / mobile
 - `apps/web` (`bun run dev:web`, Vite on port 5173) and `apps/mobile` (`bun run dev:mobile`, Expo) are scaffolds: stub pages with routing but no backend wiring yet.
+- `apps/spiky` (`bun run dev:spiky`, Vite on port 5174) is a blank React playground for spikes and POCs before promoting ideas into `apps/web`.

@@ -14,6 +14,7 @@ Phase 0 (scaffold) is implemented with:
 ## Workspaces
 
 - `apps/web` - Vite + React app (`@nook/web`)
+- `apps/spiky` - Vite + React playground for spikes and POCs (`@nook/spiky`)
 - `apps/mobile` - Expo app (`@nook/mobile`)
 - `convex` - Convex backend workspace (`@nook/convex`)
 - `packages/domain` - Shared domain types and helpers (`@nook/domain`)
@@ -31,6 +32,7 @@ Run individual dev services:
 
 ```sh
 bun run dev:web
+bun run dev:spiky
 bun run dev:mobile
 bun run dev:convex
 ```
