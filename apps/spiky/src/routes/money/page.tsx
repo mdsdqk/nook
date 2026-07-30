@@ -26,7 +26,7 @@ export function MoneyPage() {
         <h1 className="text-title-md font-medium text-white">Money</h1>
       </header>
 
-      <main className="flex flex-1 flex-col gap-stack-lg overflow-y-auto px-container py-stack-md">
+      <main className="flex min-h-0 flex-1 flex-col gap-stack-lg overflow-y-auto px-container py-stack-md">
         {money.isLoading ? (
           <MoneySkeletons />
         ) : money.isEmpty ? (

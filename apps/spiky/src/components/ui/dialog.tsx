@@ -132,7 +132,7 @@ export function Select({
   return (
     <select
       className={cn(
-        "flex h-10 w-full rounded border border-white/8 bg-surface-container-lowest px-3 py-2 text-body-base text-on-surface transition-all duration-200",
+        "flex h-10 w-full cursor-pointer rounded border border-white/8 bg-surface-container-lowest px-3 py-2 text-body-base text-on-surface transition-all duration-200",
         "focus-visible:outline-none focus-visible:border-primary/50 focus-visible:shadow-[0_0_16px_rgb(208_188_255_/_0.2)]",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,

@@ -75,16 +75,16 @@ export function AppShell() {
   const displayName = session?.name ?? session?.username ?? "User";
 
   return (
-    <div className="flex min-h-screen bg-canvas text-on-surface">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-white/5 bg-surface-container-low">
-        <div className="flex items-center gap-3 px-5 py-5">
+    <div className="flex h-dvh overflow-hidden bg-canvas text-on-surface">
+      <aside className="flex w-60 shrink-0 flex-col overflow-hidden border-r border-white/5 bg-surface-container-low">
+        <div className="flex shrink-0 items-center gap-3 px-5 py-5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-container text-body-sm font-semibold text-white">
             N
           </div>
           <span className="text-title-md font-medium text-white">Nook</span>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Main">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3" aria-label="Main">
           {navItems.map((item) => {
             const Icon = item.icon;
             const badge = item.badge ? (
@@ -107,7 +107,7 @@ export function AppShell() {
                   to={item.to}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2.5 text-body-sm transition-colors",
+                      "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-body-sm transition-colors",
                       isActive
                         ? "bg-primary/10 text-primary"
                         : "text-on-surface/70 hover:bg-white/5 hover:text-on-surface",
@@ -135,10 +135,10 @@ export function AppShell() {
           })}
         </nav>
 
-        <div className="mt-auto border-t border-white/5 px-3 py-3">
+        <div className="mt-auto shrink-0 border-t border-white/5 px-3 py-3">
           <button
             type="button"
-            className="mb-1 flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-body-sm text-on-surface/70"
+            className="mb-1 flex w-full cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-body-sm text-on-surface/70"
             disabled
           >
             <Settings className="h-4 w-4 shrink-0" aria-hidden />
@@ -148,7 +148,7 @@ export function AppShell() {
           <div className="relative" ref={menuRef}>
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-white/5"
+              className="flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-white/5"
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               aria-controls={menuId}
@@ -176,7 +176,7 @@ export function AppShell() {
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-body-sm text-on-surface hover:bg-white/5"
+                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-body-sm text-on-surface hover:bg-white/5"
                   onClick={handleLogout}
                 >
                   <LogOut className="h-4 w-4" aria-hidden />
@@ -188,7 +188,7 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Outlet />
       </div>
     </div>

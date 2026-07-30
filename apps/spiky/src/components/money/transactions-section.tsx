@@ -149,7 +149,7 @@ export function TransactionsSection({
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full items-center px-3 py-2.5 text-left text-body-sm text-on-surface hover:bg-white/5 disabled:opacity-50"
+                  className="flex w-full cursor-pointer items-center px-3 py-2.5 text-left text-body-sm text-on-surface hover:bg-white/5 disabled:cursor-default disabled:opacity-50"
                   disabled={syncPending}
                   onClick={() => {
                     void handleSyncTransfers();
