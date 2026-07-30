@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { filterTransactions } from "../filters";
+import { signedTransactionAmount } from "../format";
 import { SEED_ACCOUNTS, SEED_TRANSACTIONS } from "../mock-data";
 import { moneyStore } from "../store";
 import type { TransactionFilters } from "../types";
@@ -10,6 +11,19 @@ const baseFilters: TransactionFilters = {
   cardAccountId: null,
   search: "",
 };
+
+describe("signedTransactionAmount", () => {
+  it("signs income positive and expense negative", () => {
+    expect(signedTransactionAmount("income", 12.5)).toBe(12.5);
+    expect(signedTransactionAmount("expense", 12.5)).toBe(-12.5);
+  });
+
+  it("signs transfer legs by role", () => {
+    expect(signedTransactionAmount("transfer", 100, "out")).toBe(-100);
+    expect(signedTransactionAmount("transfer", 100, "in")).toBe(100);
+    expect(signedTransactionAmount("transfer", 100)).toBe(-100);
+  });
+});
 
 describe("filterTransactions", () => {
   it("filters by type", () => {

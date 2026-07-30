@@ -1,8 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserAccount } from "./lib/ownership";
+import {
+  deleteTransferLeg,
+  isLinkedTransfer,
+  unlinkTransferPair,
+} from "./lib/transferLinks";
 
-const transactionValidator = v.object({
+export const transactionValidator = v.object({
   _id: v.id("transactions"),
   _creationTime: v.number(),
   userId: v.id("users"),
@@ -18,6 +23,8 @@ const transactionValidator = v.object({
   externalKey: v.optional(v.string()),
   source: v.optional(v.string()),
   statementId: v.optional(v.id("parsedStatements")),
+  linkedTransactionId: v.optional(v.id("transactions")),
+  transferRole: v.optional(v.union(v.literal("out"), v.literal("in"))),
 });
 
 const ALLOWED_TYPES = new Set([
@@ -26,6 +33,28 @@ const ALLOWED_TYPES = new Set([
   "transfer",
   "obligation",
 ]);
+
+function breaksTransferLink(
+  txn: {
+    accountId: string;
+    type: string;
+    amount: number;
+    linkedTransactionId?: string;
+  },
+  args: {
+    accountId?: string;
+    type?: string;
+    amount?: number;
+  },
+): boolean {
+  if (!isLinkedTransfer(txn)) return false;
+  if (args.accountId !== undefined && args.accountId !== txn.accountId) {
+    return true;
+  }
+  if (args.type !== undefined && args.type !== txn.type) return true;
+  if (args.amount !== undefined && args.amount !== txn.amount) return true;
+  return false;
+}
 
 export const list = query({
   args: {
@@ -150,6 +179,17 @@ export const update = mutation({
       throw new Error("Amount must be greater than zero");
     }
 
+    // Structural edits break transfer pairing — unlink both legs first.
+    if (breaksTransferLink(txn, args)) {
+      await unlinkTransferPair(ctx, txn);
+    }
+
+    // Re-read after possible unlink/replace.
+    const current = await ctx.db.get(args.transactionId);
+    if (!current || current.userId !== args.userId) {
+      throw new Error("Transaction not found");
+    }
+
     const patch: Record<string, string | number | undefined> = {};
     if (args.accountId !== undefined) patch.accountId = args.accountId;
     if (args.date !== undefined) patch.date = args.date;
@@ -177,7 +217,7 @@ export const remove = mutation({
     if (!txn || txn.userId !== args.userId) {
       throw new Error("Transaction not found");
     }
-    await ctx.db.delete(args.transactionId);
+    await deleteTransferLeg(ctx, txn);
     return null;
   },
 });

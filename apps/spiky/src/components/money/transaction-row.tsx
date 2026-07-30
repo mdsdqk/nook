@@ -33,11 +33,20 @@ export function TransactionRow({
   const signed = signedTransactionAmount(
     transaction.type,
     transaction.amount,
+    transaction.transferRole,
   );
-  const isIncome = transaction.type === "income";
+  const isIncome =
+    transaction.type === "income" ||
+    (transaction.type === "transfer" && transaction.transferRole === "in");
   const isTransfer = transaction.type === "transfer";
 
-  const directionLabel = isTransfer ? "transfer" : isIncome ? "in" : "out";
+  const directionLabel = isTransfer
+    ? transaction.transferRole === "in"
+      ? "transfer in"
+      : "transfer out"
+    : isIncome
+      ? "in"
+      : "out";
 
   return (
     <button
