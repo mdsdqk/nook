@@ -1,5 +1,9 @@
 import type { AccountType } from "@nook/domain";
-import type { TransactionType, TransactionCategory } from "@nook/domain";
+import type {
+  TransactionDirection,
+  TransactionType,
+  TransactionTypeGroup,
+} from "@nook/domain";
 
 /** Mirrors Convex `accounts` + latest balance for UI. */
 export interface MoneyAccount {
@@ -22,12 +26,13 @@ export interface MoneyTransaction {
   userId: string;
   accountId: string;
   date: string;
+  direction: TransactionDirection;
   type: TransactionType;
   amount: number;
   description?: string;
   narration?: string;
   merchant?: string;
-  category?: TransactionCategory | string;
+  category?: string;
   notes?: string;
   externalKey?: string;
   source?: string;
@@ -54,7 +59,8 @@ export interface CashFlowPoint {
   net: number;
 }
 
-export type TransactionTypeFilter = "all" | "income" | "expense" | "transfer";
+/** Filter by type group (or all). */
+export type TransactionTypeFilter = "all" | TransactionTypeGroup;
 
 export interface TransactionFilters {
   type: TransactionTypeFilter;

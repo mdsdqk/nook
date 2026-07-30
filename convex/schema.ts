@@ -32,6 +32,7 @@ export default defineSchema({
     userId: v.id("users"),
     accountId: v.id("accounts"),
     date: v.string(),
+    direction: v.union(v.literal("credit"), v.literal("debit")),
     type: v.string(),
     amount: v.number(),
     description: v.optional(v.string()),

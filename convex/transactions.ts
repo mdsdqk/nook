@@ -1,3 +1,4 @@
+import { TRANSACTION_TYPES, isTransactionType } from "@nook/domain";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserAccount } from "./lib/ownership";
@@ -13,6 +14,7 @@ export const transactionValidator = v.object({
   userId: v.id("users"),
   accountId: v.id("accounts"),
   date: v.string(),
+  direction: v.union(v.literal("credit"), v.literal("debit")),
   type: v.string(),
   amount: v.number(),
   description: v.optional(v.string()),
@@ -27,24 +29,22 @@ export const transactionValidator = v.object({
   transferRole: v.optional(v.union(v.literal("out"), v.literal("in"))),
 });
 
-const ALLOWED_TYPES = new Set([
-  "income",
-  "expense",
-  "transfer",
-  "obligation",
-]);
+const ALLOWED_TYPES = new Set<string>(TRANSACTION_TYPES);
+const ALLOWED_DIRECTIONS = new Set(["credit", "debit"]);
 
 function breaksTransferLink(
   txn: {
     accountId: string;
     type: string;
     amount: number;
+    direction?: string;
     linkedTransactionId?: string;
   },
   args: {
     accountId?: string;
     type?: string;
     amount?: number;
+    direction?: string;
   },
 ): boolean {
   if (!isLinkedTransfer(txn)) return false;
@@ -52,6 +52,9 @@ function breaksTransferLink(
     return true;
   }
   if (args.type !== undefined && args.type !== txn.type) return true;
+  if (args.direction !== undefined && args.direction !== txn.direction) {
+    return true;
+  }
   if (args.amount !== undefined && args.amount !== txn.amount) return true;
   return false;
 }
@@ -61,6 +64,7 @@ export const list = query({
     userId: v.id("users"),
     accountId: v.optional(v.id("accounts")),
     type: v.optional(v.string()),
+    direction: v.optional(v.union(v.literal("credit"), v.literal("debit"))),
   },
   returns: v.array(transactionValidator),
   handler: async (ctx, args) => {
@@ -78,10 +82,13 @@ export const list = query({
         .collect();
     }
 
-    const filtered =
-      args.type !== undefined
-        ? rows.filter((row) => row.type === args.type)
-        : rows;
+    let filtered = rows;
+    if (args.type !== undefined) {
+      filtered = filtered.filter((row) => row.type === args.type);
+    }
+    if (args.direction !== undefined) {
+      filtered = filtered.filter((row) => row.direction === args.direction);
+    }
 
     return filtered.sort((a, b) => {
       const byDate = b.date.localeCompare(a.date);
@@ -111,6 +118,7 @@ export const create = mutation({
     userId: v.id("users"),
     accountId: v.id("accounts"),
     date: v.string(),
+    direction: v.union(v.literal("credit"), v.literal("debit")),
     type: v.string(),
     amount: v.number(),
     description: v.optional(v.string()),
@@ -123,7 +131,10 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireUserAccount(ctx, args.userId, args.accountId);
 
-    if (!ALLOWED_TYPES.has(args.type)) {
+    if (!ALLOWED_DIRECTIONS.has(args.direction)) {
+      throw new Error("Invalid transaction direction");
+    }
+    if (!ALLOWED_TYPES.has(args.type) || !isTransactionType(args.type)) {
       throw new Error("Invalid transaction type");
     }
     if (!(args.amount > 0)) {
@@ -134,6 +145,7 @@ export const create = mutation({
       userId: args.userId,
       accountId: args.accountId,
       date: args.date,
+      direction: args.direction,
       type: args.type,
       amount: args.amount,
       source: "manual",
@@ -154,6 +166,7 @@ export const update = mutation({
     transactionId: v.id("transactions"),
     accountId: v.optional(v.id("accounts")),
     date: v.optional(v.string()),
+    direction: v.optional(v.union(v.literal("credit"), v.literal("debit"))),
     type: v.optional(v.string()),
     amount: v.optional(v.number()),
     description: v.optional(v.string()),
@@ -172,7 +185,16 @@ export const update = mutation({
     if (args.accountId !== undefined) {
       await requireUserAccount(ctx, args.userId, args.accountId);
     }
-    if (args.type !== undefined && !ALLOWED_TYPES.has(args.type)) {
+    if (
+      args.direction !== undefined &&
+      !ALLOWED_DIRECTIONS.has(args.direction)
+    ) {
+      throw new Error("Invalid transaction direction");
+    }
+    if (
+      args.type !== undefined &&
+      (!ALLOWED_TYPES.has(args.type) || !isTransactionType(args.type))
+    ) {
       throw new Error("Invalid transaction type");
     }
     if (args.amount !== undefined && !(args.amount > 0)) {
@@ -193,15 +215,34 @@ export const update = mutation({
     const patch: Record<string, string | number | undefined> = {};
     if (args.accountId !== undefined) patch.accountId = args.accountId;
     if (args.date !== undefined) patch.date = args.date;
+    if (args.direction !== undefined) patch.direction = args.direction;
     if (args.type !== undefined) patch.type = args.type;
     if (args.amount !== undefined) patch.amount = args.amount;
     if (args.description !== undefined) patch.description = args.description;
     if (args.narration !== undefined) patch.narration = args.narration;
     if (args.merchant !== undefined) patch.merchant = args.merchant;
-    if (args.category !== undefined) patch.category = args.category;
     if (args.notes !== undefined) patch.notes = args.notes;
 
-    await ctx.db.patch(args.transactionId, patch);
+    const clearCategory =
+      args.category !== undefined && args.category.trim() === "";
+    if (args.category !== undefined && !clearCategory) {
+      patch.category = args.category;
+    }
+
+    if (clearCategory) {
+      const {
+        _id: _ignoredId,
+        _creationTime: _ignoredCreation,
+        category: _category,
+        ...rest
+      } = current;
+      await ctx.db.replace(args.transactionId, {
+        ...rest,
+        ...patch,
+      });
+    } else {
+      await ctx.db.patch(args.transactionId, patch);
+    }
     return args.transactionId;
   },
 });

@@ -14,6 +14,8 @@ const TYPE_CHIPS: { value: TransactionTypeFilter; label: string }[] = [
   { value: "income", label: "Income" },
   { value: "expense", label: "Expense" },
   { value: "transfer", label: "Transfers" },
+  { value: "investment", label: "Investments" },
+  { value: "debt", label: "Debt" },
 ];
 
 type TransactionFiltersProps = {

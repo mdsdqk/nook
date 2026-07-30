@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
 } from "lucide-react";
+import { isTransferType } from "@nook/domain";
 import { Chip } from "@/components/ui/chip";
 import {
   formatTxnDate,
@@ -31,22 +32,19 @@ export function TransactionRow({
     transaction.narration ||
     "Transaction";
   const signed = signedTransactionAmount(
-    transaction.type,
+    transaction.direction,
     transaction.amount,
-    transaction.transferRole,
   );
-  const isIncome =
-    transaction.type === "income" ||
-    (transaction.type === "transfer" && transaction.transferRole === "in");
-  const isTransfer = transaction.type === "transfer";
+  const isCredit = transaction.direction === "credit";
+  const isTransfer = isTransferType(transaction.type);
 
   const directionLabel = isTransfer
     ? transaction.transferRole === "in"
       ? "transfer in"
       : "transfer out"
-    : isIncome
-      ? "in"
-      : "out";
+    : isCredit
+      ? "credit"
+      : "debit";
 
   return (
     <button
@@ -80,7 +78,7 @@ export function TransactionRow({
         <span
           className={cn(
             "block font-mono text-body-sm font-medium",
-            isIncome ? "text-secondary" : "text-white",
+            isCredit ? "text-secondary" : "text-white",
           )}
         >
           {formatSignedMoney(signed, account?.currency ?? DEFAULT_CURRENCY)}
@@ -95,7 +93,7 @@ export function TransactionRow({
           "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
           isTransfer
             ? "bg-tertiary/10 text-tertiary"
-            : isIncome
+            : isCredit
               ? "bg-secondary/10 text-secondary"
               : "bg-error/10 text-error",
         )}
@@ -103,7 +101,7 @@ export function TransactionRow({
       >
         {isTransfer ? (
           <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden />
-        ) : isIncome ? (
+        ) : isCredit ? (
           <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden />
         ) : (
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />

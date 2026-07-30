@@ -2,18 +2,23 @@ import {
   computeAccountBalance,
   type LedgerTransaction,
   type TransactionType,
+  isTransactionType,
 } from "@nook/domain";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 type Ctx = QueryCtx | MutationCtx;
 
+function isInternalTransfer(type: string): boolean {
+  return type === "internal_transfer" || type === "transfer";
+}
+
 /**
  * Map ledger docs to domain transactions, collapsing linked transfer pairs
  * into a single dual-account transfer so balances stay net-worth neutral.
  *
  * Fail closed: only collapse when amounts match. Broken / mismatched / orphaned
- * transfer legs fall back to expense (out) or income (in) so balances stay correct.
+ * transfer legs fall back to direction-based signed amounts.
  */
 export function toLedgerTransactions(
   txns: Doc<"transactions">[],
@@ -26,14 +31,14 @@ export function toLedgerTransactions(
     if (skip.has(txn._id)) continue;
 
     if (
-      txn.type === "transfer" &&
+      isInternalTransfer(txn.type) &&
       txn.linkedTransactionId !== undefined &&
       txn.transferRole !== undefined
     ) {
       const counterpart = byId.get(txn.linkedTransactionId);
       if (
         counterpart &&
-        counterpart.type === "transfer" &&
+        isInternalTransfer(counterpart.type) &&
         counterpart.linkedTransactionId === txn._id &&
         counterpart.transferRole !== undefined &&
         counterpart.transferRole !== txn.transferRole &&
@@ -48,7 +53,8 @@ export function toLedgerTransactions(
           toAccountId: inn.accountId,
           amount: out.amount,
           date: out.date,
-          type: "transfer",
+          direction: "debit",
+          type: "internal_transfer",
         });
         continue;
       }
@@ -60,32 +66,73 @@ export function toLedgerTransactions(
   return ledger;
 }
 
-/** Map a non-collapsed transfer leg by role so in-legs never subtract. */
+/** Map a non-collapsed transfer leg by role/direction so in-legs never subtract. */
 function fallbackLedgerTxn(txn: Doc<"transactions">): LedgerTransaction {
-  if (txn.type === "transfer") {
-    if (txn.transferRole === "in") {
+  const direction = resolveDirection(txn);
+
+  if (isInternalTransfer(txn.type)) {
+    if (txn.transferRole === "in" || direction === "credit") {
       return {
         accountId: txn.accountId,
         amount: txn.amount,
         date: txn.date,
-        type: "income",
+        direction: "credit",
+        type: "unclassified_income",
       };
     }
-    if (txn.transferRole === "out") {
-      return {
-        accountId: txn.accountId,
-        amount: txn.amount,
-        date: txn.date,
-        type: "expense",
-      };
-    }
+    return {
+      accountId: txn.accountId,
+      amount: txn.amount,
+      date: txn.date,
+      direction: "debit",
+      type: "expense",
+    };
   }
+
+  const type: TransactionType = isTransactionType(txn.type)
+    ? txn.type
+    : direction === "credit"
+      ? "unclassified_income"
+      : "expense";
+
   return {
     accountId: txn.accountId,
     amount: txn.amount,
     date: txn.date,
-    type: txn.type as TransactionType,
+    direction,
+    type,
   };
+}
+
+function resolveDirection(
+  txn: Doc<"transactions">,
+): "credit" | "debit" {
+  if (txn.direction === "credit" || txn.direction === "debit") {
+    return txn.direction;
+  }
+  if (txn.transferRole === "in") return "credit";
+  if (txn.transferRole === "out") return "debit";
+  if (
+    txn.type === "income" ||
+    txn.type === "unclassified_income" ||
+    txn.type === "salary" ||
+    txn.type === "interest" ||
+    txn.type === "dividend" ||
+    txn.type === "rental_income" ||
+    txn.type === "business_income" ||
+    txn.type === "capital_gain" ||
+    txn.type === "gift" ||
+    txn.type === "cashback" ||
+    txn.type === "tax_refund" ||
+    txn.type === "loan_disbursement" ||
+    txn.type === "investment_redemption" ||
+    txn.type === "insurance_claim" ||
+    txn.type === "friend_repayment" ||
+    txn.type === "shared_expense_repayment"
+  ) {
+    return "credit";
+  }
+  return "debit";
 }
 
 export async function computeBalancesForUser(

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import type { AccountType, TransactionType } from "@nook/domain";
+import type { AccountType, TransactionDirection, TransactionType } from "@nook/domain";
 import { api } from "@nook/convex/_generated/api";
 import type { Id } from "@nook/convex/_generated/dataModel";
 import { useAuth } from "@/lib/auth";
@@ -60,6 +60,7 @@ function mapTransaction(doc: {
   userId: Id<"users">;
   accountId: Id<"accounts">;
   date: string;
+  direction?: "credit" | "debit";
   type: string;
   amount: number;
   description?: string;
@@ -73,11 +74,21 @@ function mapTransaction(doc: {
   linkedTransactionId?: Id<"transactions">;
   transferRole?: "out" | "in";
 }): MoneyTransaction {
+  const direction: TransactionDirection =
+    doc.direction ??
+    (doc.transferRole === "in"
+      ? "credit"
+      : doc.type === "unclassified_income" ||
+          doc.type === "salary" ||
+          doc.type === "income"
+        ? "credit"
+        : "debit");
   const txn: MoneyTransaction = {
     id: doc._id,
     userId: doc.userId,
     accountId: doc.accountId,
     date: doc.date,
+    direction,
     type: doc.type as TransactionType,
     amount: doc.amount,
   };
@@ -273,10 +284,12 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
   const createTransaction = useCallback(
     async (input: TransactionInput) => {
       if (!userId) throw new Error("Not authenticated");
+      const category = input.category?.trim();
       await createTxnMut({
         userId,
         accountId: input.accountId as Id<"accounts">,
         date: input.date,
+        direction: input.direction,
         type: input.type,
         amount: input.amount,
         ...(input.description !== undefined
@@ -286,9 +299,7 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
           ? { narration: input.narration }
           : {}),
         ...(input.merchant !== undefined ? { merchant: input.merchant } : {}),
-        ...(input.category !== undefined
-          ? { category: String(input.category) }
-          : {}),
+        ...(category ? { category } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
       });
     },
@@ -303,6 +314,7 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
         transactionId: id as Id<"transactions">,
         accountId: input.accountId as Id<"accounts">,
         date: input.date,
+        direction: input.direction,
         type: input.type,
         amount: input.amount,
         ...(input.description !== undefined
@@ -312,9 +324,8 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
           ? { narration: input.narration }
           : {}),
         ...(input.merchant !== undefined ? { merchant: input.merchant } : {}),
-        ...(input.category !== undefined
-          ? { category: String(input.category) }
-          : {}),
+        // Empty string clears category server-side.
+        category: input.category?.trim() ?? "",
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
       });
     },

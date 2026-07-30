@@ -1,13 +1,15 @@
 import type { BalanceAssertion } from "./assertion";
 import type { AccountType } from "./account";
 import { isAssetType } from "./account";
-import type { TransactionType } from "./transaction";
+import type { TransactionDirection, TransactionType } from "./transaction";
+import { isTransferType, signedAmount } from "./transaction";
 
 export interface LedgerTransaction {
   accountId: string;
   toAccountId?: string;
   amount: number;
   date: string;
+  direction: TransactionDirection;
   type: TransactionType;
 }
 
@@ -24,14 +26,17 @@ export function computeTransactionEffect(
     return 0;
   }
 
-  if (tx.type === "income") return tx.accountId === accountId ? tx.amount : 0;
-  if (tx.type === "expense" || tx.type === "obligation") {
-    return tx.accountId === accountId ? -tx.amount : 0;
-  }
-  if (tx.type === "transfer") {
+  // Collapsed dual-account internal transfer: source debit, destination credit
+  if (isTransferType(tx.type) && tx.toAccountId) {
     if (tx.accountId === accountId) return -tx.amount;
     if (tx.toAccountId === accountId) return tx.amount;
+    return 0;
   }
+
+  if (tx.accountId === accountId) {
+    return signedAmount(tx.direction, tx.amount);
+  }
+
   return 0;
 }
 

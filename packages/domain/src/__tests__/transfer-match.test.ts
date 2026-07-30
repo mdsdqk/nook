@@ -27,26 +27,58 @@ describe("dateDiffDays", () => {
 });
 
 describe("canBeTransferOut / canBeTransferIn", () => {
-  it("classifies expense and income", () => {
+  it("classifies by direction", () => {
     expect(
-      canBeTransferOut(txn({ id: "1", accountId: "a", type: "expense", amount: 10 })),
+      canBeTransferOut(
+        txn({
+          id: "1",
+          accountId: "a",
+          type: "expense",
+          amount: 10,
+          direction: "debit",
+        }),
+      ),
     ).toBe(true);
     expect(
-      canBeTransferIn(txn({ id: "1", accountId: "a", type: "expense", amount: 10 })),
+      canBeTransferIn(
+        txn({
+          id: "1",
+          accountId: "a",
+          type: "expense",
+          amount: 10,
+          direction: "debit",
+        }),
+      ),
     ).toBe(false);
     expect(
-      canBeTransferIn(txn({ id: "1", accountId: "a", type: "income", amount: 10 })),
+      canBeTransferIn(
+        txn({
+          id: "1",
+          accountId: "a",
+          type: "unclassified_income",
+          amount: 10,
+          direction: "credit",
+        }),
+      ),
     ).toBe(true);
     expect(
-      canBeTransferOut(txn({ id: "1", accountId: "a", type: "income", amount: 10 })),
+      canBeTransferOut(
+        txn({
+          id: "1",
+          accountId: "a",
+          type: "unclassified_income",
+          amount: 10,
+          direction: "credit",
+        }),
+      ),
     ).toBe(false);
   });
 
-  it("allows unlinked transfers as wildcards", () => {
+  it("allows unlinked internal transfers as wildcards without direction", () => {
     const wildcard = txn({
       id: "1",
       accountId: "a",
-      type: "transfer",
+      type: "internal_transfer",
       amount: 10,
     });
     expect(canBeTransferOut(wildcard)).toBe(true);
@@ -59,7 +91,7 @@ describe("canBeTransferOut / canBeTransferIn", () => {
         txn({
           id: "1",
           accountId: "a",
-          type: "transfer",
+          type: "internal_transfer",
           amount: 10,
           transferRole: "out",
         }),
@@ -70,7 +102,7 @@ describe("canBeTransferOut / canBeTransferIn", () => {
         txn({
           id: "1",
           accountId: "a",
-          type: "transfer",
+          type: "internal_transfer",
           amount: 10,
           transferRole: "out",
         }),
@@ -83,6 +115,7 @@ describe("canBeTransferOut / canBeTransferIn", () => {
           accountId: "a",
           type: "expense",
           amount: 10,
+          direction: "debit",
           linkedTransactionId: "x",
         }),
       ),
@@ -91,7 +124,7 @@ describe("canBeTransferOut / canBeTransferIn", () => {
 });
 
 describe("matchTransferPairs", () => {
-  it("pairs expense with income within ±3 days", () => {
+  it("pairs debit with credit within ±3 days", () => {
     const pairs = matchTransferPairs([
       txn({
         id: "out",
@@ -99,13 +132,15 @@ describe("matchTransferPairs", () => {
         type: "expense",
         amount: 500,
         date: "2026-07-15",
+        direction: "debit",
       }),
       txn({
         id: "in",
         accountId: "b",
-        type: "income",
+        type: "unclassified_income",
         amount: 500,
         date: "2026-07-18",
+        direction: "credit",
       }),
     ]);
     expect(pairs).toEqual([{ outId: "out", inId: "in" }]);
@@ -119,13 +154,15 @@ describe("matchTransferPairs", () => {
         type: "expense",
         amount: 500,
         date: "2026-07-15",
+        direction: "debit",
       }),
       txn({
         id: "in",
         accountId: "b",
-        type: "income",
+        type: "unclassified_income",
         amount: 500,
         date: "2026-07-19",
+        direction: "credit",
       }),
     ]);
     expect(pairs).toEqual([]);
@@ -139,12 +176,14 @@ describe("matchTransferPairs", () => {
           accountId: "a",
           type: "expense",
           amount: 500,
+          direction: "debit",
         }),
         txn({
           id: "in",
           accountId: "a",
-          type: "income",
+          type: "unclassified_income",
           amount: 500,
+          direction: "credit",
         }),
       ]),
     ).toEqual([]);
@@ -157,13 +196,15 @@ describe("matchTransferPairs", () => {
           type: "expense",
           amount: 500,
           currency: "INR",
+          direction: "debit",
         }),
         txn({
           id: "in",
           accountId: "b",
-          type: "income",
+          type: "unclassified_income",
           amount: 500,
           currency: "USD",
+          direction: "credit",
         }),
       ]),
     ).toEqual([]);
@@ -171,9 +212,27 @@ describe("matchTransferPairs", () => {
 
   it("does not reuse a transaction across pairs", () => {
     const pairs = matchTransferPairs([
-      txn({ id: "out", accountId: "a", type: "expense", amount: 100 }),
-      txn({ id: "in1", accountId: "b", type: "income", amount: 100 }),
-      txn({ id: "in2", accountId: "c", type: "income", amount: 100 }),
+      txn({
+        id: "out",
+        accountId: "a",
+        type: "expense",
+        amount: 100,
+        direction: "debit",
+      }),
+      txn({
+        id: "in1",
+        accountId: "b",
+        type: "unclassified_income",
+        amount: 100,
+        direction: "credit",
+      }),
+      txn({
+        id: "in2",
+        accountId: "c",
+        type: "unclassified_income",
+        amount: 100,
+        direction: "credit",
+      }),
     ]);
     expect(pairs).toHaveLength(1);
     expect(pairs[0]?.outId).toBe("out");
@@ -186,66 +245,70 @@ describe("matchTransferPairs", () => {
         accountId: "a",
         type: "expense",
         amount: 500,
+        direction: "debit",
         linkedTransactionId: "x",
       }),
       txn({
         id: "in",
         accountId: "b",
-        type: "income",
+        type: "unclassified_income",
         amount: 500,
+        direction: "credit",
       }),
     ]);
     expect(pairs).toEqual([]);
   });
 
-  it("pairs expense with an unlinked transfer", () => {
+  it("pairs expense with an unlinked internal_transfer", () => {
     const pairs = matchTransferPairs([
       txn({
         id: "out",
         accountId: "a",
         type: "expense",
         amount: 250,
+        direction: "debit",
       }),
       txn({
         id: "in",
         accountId: "b",
-        type: "transfer",
+        type: "internal_transfer",
         amount: 250,
       }),
     ]);
     expect(pairs).toEqual([{ outId: "out", inId: "in" }]);
   });
 
-  it("pairs an unlinked transfer with income", () => {
+  it("pairs an unlinked internal_transfer with income", () => {
     const pairs = matchTransferPairs([
       txn({
         id: "out",
         accountId: "a",
-        type: "transfer",
+        type: "internal_transfer",
         amount: 250,
       }),
       txn({
         id: "in",
         accountId: "b",
-        type: "income",
+        type: "unclassified_income",
         amount: 250,
+        direction: "credit",
       }),
     ]);
     expect(pairs).toEqual([{ outId: "out", inId: "in" }]);
   });
 
-  it("pairs two unlinked transfers", () => {
+  it("pairs two unlinked internal transfers", () => {
     const pairs = matchTransferPairs([
       txn({
         id: "a",
         accountId: "acct1",
-        type: "transfer",
+        type: "internal_transfer",
         amount: 75,
       }),
       txn({
         id: "b",
         accountId: "acct2",
-        type: "transfer",
+        type: "internal_transfer",
         amount: 75,
       }),
     ]);
@@ -263,20 +326,23 @@ describe("matchTransferPairs", () => {
         type: "expense",
         amount: 40,
         date: "2026-07-15",
+        direction: "debit",
       }),
       txn({
         id: "far",
         accountId: "b",
-        type: "income",
+        type: "unclassified_income",
         amount: 40,
         date: "2026-07-18",
+        direction: "credit",
       }),
       txn({
         id: "near",
         accountId: "c",
-        type: "income",
+        type: "unclassified_income",
         amount: 40,
         date: "2026-07-16",
+        direction: "credit",
       }),
     ]);
     expect(pairs).toEqual([{ outId: "out", inId: "near" }]);

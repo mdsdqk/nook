@@ -1,3 +1,4 @@
+import { signedAmount } from "@nook/domain";
 import {
   MOCK_USER_ID,
   SEED_ACCOUNTS,
@@ -32,6 +33,13 @@ function cloneTransactions(txns: MoneyTransaction[]): MoneyTransaction[] {
 
 function createId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID().slice(0, 8)}`;
+}
+
+function balanceDelta(
+  direction: MoneyTransaction["direction"],
+  amount: number,
+): number {
+  return signedAmount(direction, Math.abs(amount));
 }
 
 class MoneyStoreImpl {
@@ -119,8 +127,7 @@ class MoneyStoreImpl {
       userId: MOCK_USER_ID,
     };
 
-    const delta =
-      input.type === "income" ? input.amount : -Math.abs(input.amount);
+    const delta = balanceDelta(input.direction, input.amount);
     const accounts = this.accounts.map((a) =>
       a.id === input.accountId ? { ...a, balance: a.balance + delta } : a,
     );
@@ -141,22 +148,16 @@ class MoneyStoreImpl {
 
     let accounts = cloneAccounts(this.accounts);
 
-    // Reverse previous effect
-    const prevDelta =
-      previous.type === "income"
-        ? previous.amount
-        : -Math.abs(previous.amount);
+    const prevDelta = balanceDelta(previous.direction, previous.amount);
     accounts = accounts.map((a) =>
       a.id === previous.accountId
         ? { ...a, balance: a.balance - prevDelta }
         : a,
     );
 
-    // Apply new effect
     const account = accounts.find((a) => a.id === next.accountId);
     if (!account) throw new Error("Account not found");
-    const nextDelta =
-      next.type === "income" ? next.amount : -Math.abs(next.amount);
+    const nextDelta = balanceDelta(next.direction, next.amount);
     accounts = accounts.map((a) =>
       a.id === next.accountId ? { ...a, balance: a.balance + nextDelta } : a,
     );
@@ -171,8 +172,7 @@ class MoneyStoreImpl {
     const txn = this.transactions.find((t) => t.id === id);
     if (!txn) throw new Error("Transaction not found");
 
-    const delta =
-      txn.type === "income" ? txn.amount : -Math.abs(txn.amount);
+    const delta = balanceDelta(txn.direction, txn.amount);
     const accounts = this.accounts.map((a) =>
       a.id === txn.accountId ? { ...a, balance: a.balance - delta } : a,
     );
