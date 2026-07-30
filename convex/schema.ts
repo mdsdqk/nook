@@ -36,12 +36,16 @@ export default defineSchema({
     amount: v.number(),
     description: v.optional(v.string()),
     narration: v.optional(v.string()),
+    merchant: v.optional(v.string()),
+    category: v.optional(v.string()),
+    notes: v.optional(v.string()),
     externalKey: v.optional(v.string()),
     source: v.optional(v.string()),
     statementId: v.optional(v.id("parsedStatements")),
   })
     .index("by_account", ["accountId"])
     .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "date"])
     .index("by_external_key", ["externalKey"])
     .index("by_statement", ["statementId"])
     .index("by_user_external_key", ["userId", "externalKey"]),

@@ -22,7 +22,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Money", icon: Wallet },
+  { label: "Money", to: "/money", icon: Wallet },
   { label: "Wealth", icon: PieChart },
   { label: "Debt", icon: CreditCard },
   { label: "Intelligence", icon: Sparkles, badge: "AI" },

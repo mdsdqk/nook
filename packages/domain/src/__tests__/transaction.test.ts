@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   type TransactionType,
   TRANSACTION_TYPE_REGISTRY,
+  TRANSACTION_CATEGORIES,
   requiresDestinationAccount,
+  isTransactionCategory,
 } from "../transaction";
 
 const ALL_TYPES = Object.keys(TRANSACTION_TYPE_REGISTRY) as TransactionType[];
@@ -64,5 +66,26 @@ describe("requiresDestinationAccount", () => {
     expect(requiresDestinationAccount("income")).toBe(false);
     expect(requiresDestinationAccount("expense")).toBe(false);
     expect(requiresDestinationAccount("obligation")).toBe(false);
+  });
+});
+
+describe("TRANSACTION_CATEGORIES", () => {
+  it("includes mock Money-page categories", () => {
+    expect(TRANSACTION_CATEGORIES).toEqual(
+      expect.arrayContaining([
+        "Income",
+        "Groceries",
+        "Subscriptions",
+        "Transport",
+        "Health",
+        "Shopping",
+        "Housing",
+      ]),
+    );
+  });
+
+  it("isTransactionCategory accepts known labels only", () => {
+    expect(isTransactionCategory("Groceries")).toBe(true);
+    expect(isTransactionCategory("Unknown")).toBe(false);
   });
 });

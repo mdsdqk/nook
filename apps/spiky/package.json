@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@nook/convex": "workspace:*",
+    "@nook/domain": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.42.3",
@@ -18,6 +20,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.18.2",
+    "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
@@ -27,6 +30,7 @@
     "@vitejs/plugin-react": "^4.4.1",
     "tailwindcss": "^4.1.7",
     "typescript": "5.9.2",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^4.1.10"
   }
 }

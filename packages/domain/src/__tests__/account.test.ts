@@ -6,6 +6,10 @@ import {
   isLiabilityType,
   getSubtypes,
   getParentType,
+  isLeafAccountType,
+  getSelectableAccountTypes,
+  isBankAccountType,
+  getAccountTypeLabel,
 } from "../account";
 
 const ALL_TYPES = Object.keys(ACCOUNT_TYPE_REGISTRY) as AccountType[];
@@ -16,6 +20,8 @@ describe("ACCOUNT_TYPE_REGISTRY", () => {
       "asset",
       "asset.cash",
       "asset.bank",
+      "asset.bank.savings",
+      "asset.bank.current",
       "asset.wallet",
       "asset.investment",
       "liability",
@@ -59,6 +65,8 @@ describe("isAssetType", () => {
       "asset",
       "asset.cash",
       "asset.bank",
+      "asset.bank.savings",
+      "asset.bank.current",
       "asset.wallet",
       "asset.investment",
     ];
@@ -96,6 +104,8 @@ describe("isLiabilityType", () => {
       "asset",
       "asset.cash",
       "asset.bank",
+      "asset.bank.savings",
+      "asset.bank.current",
       "asset.wallet",
       "asset.investment",
     ];
@@ -113,6 +123,12 @@ describe("getSubtypes", () => {
     );
   });
 
+  it("returns bank product subtypes for 'asset.bank'", () => {
+    expect(getSubtypes("asset.bank").sort()).toEqual(
+      ["asset.bank.current", "asset.bank.savings"].sort(),
+    );
+  });
+
   it("returns all liability subtypes for 'liability'", () => {
     const subtypes = getSubtypes("liability");
     expect(subtypes.sort()).toEqual(
@@ -122,6 +138,7 @@ describe("getSubtypes", () => {
 
   it("returns empty array for leaf types", () => {
     expect(getSubtypes("asset.cash")).toEqual([]);
+    expect(getSubtypes("asset.bank.savings")).toEqual([]);
     expect(getSubtypes("liability.loan")).toEqual([]);
   });
 });
@@ -130,6 +147,8 @@ describe("getParentType", () => {
   it("returns parent for subtypes", () => {
     expect(getParentType("asset.cash")).toBe("asset");
     expect(getParentType("asset.bank")).toBe("asset");
+    expect(getParentType("asset.bank.savings")).toBe("asset.bank");
+    expect(getParentType("asset.bank.current")).toBe("asset.bank");
     expect(getParentType("asset.wallet")).toBe("asset");
     expect(getParentType("asset.investment")).toBe("asset");
     expect(getParentType("liability.credit_card")).toBe("liability");
@@ -139,5 +158,34 @@ describe("getParentType", () => {
   it("returns null for root types", () => {
     expect(getParentType("asset")).toBeNull();
     expect(getParentType("liability")).toBeNull();
+  });
+});
+
+describe("leaf / selectable helpers", () => {
+  it("treats bank category as non-leaf and products as leaves", () => {
+    expect(isLeafAccountType("asset.bank")).toBe(false);
+    expect(isLeafAccountType("asset.bank.savings")).toBe(true);
+    expect(isLeafAccountType("asset.bank.current")).toBe(true);
+  });
+
+  it("selectable types exclude category parents", () => {
+    const selectable = getSelectableAccountTypes();
+    expect(selectable).toContain("asset.bank.savings");
+    expect(selectable).toContain("asset.bank.current");
+    expect(selectable).not.toContain("asset.bank");
+    expect(selectable).not.toContain("asset");
+    expect(selectable).not.toContain("liability");
+  });
+
+  it("isBankAccountType covers bank hierarchy", () => {
+    expect(isBankAccountType("asset.bank")).toBe(true);
+    expect(isBankAccountType("asset.bank.savings")).toBe(true);
+    expect(isBankAccountType("asset.wallet")).toBe(false);
+  });
+
+  it("getAccountTypeLabel uses registry labels", () => {
+    expect(getAccountTypeLabel("asset.bank.savings")).toBe("Savings");
+    expect(getAccountTypeLabel("asset.bank.current")).toBe("Current");
+    expect(getAccountTypeLabel("liability.credit_card")).toBe("Credit Card");
   });
 });

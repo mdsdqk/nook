@@ -19,7 +19,8 @@ import type {
  *   Opening Balance:₹ <n>  Closing Balance:₹ <n>
  *
  * Extracted text often uses tabs between tokens. Debit/credit columns are not
- * reliably separated, so direction is inferred from the running balance delta.
+ * reliably separated, so direction is inferred from the running balance delta
+ * after reversing the newest-first PDF order to chronological.
  */
 
 const TXN_DATE = /^(\d{2}\/\d{2}\/\d{4})\b/;
@@ -27,11 +28,14 @@ const TXN_LINE =
   /^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(\d{2}\/\d{2}\/\d{4})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/;
 const AMOUNT = /[\d,]+\.\d{2}/g;
 
+// Generated-at stamp + "N Page N of N" — date-prefixed so ^Page alone misses it.
+const PAGE_FOOTER =
+  /\bPage\s+\d+\s+of\s+\d+\b/i;
+
 const FOOTER_MARKERS = [
   /^Statement\s+Summary\b/i,
   /^Opening\s+Balance\s*:/i,
   /^Closing\s+Balance\s*:/i,
-  /^Page\s+\d+\s+of\s+\d+/i,
 ];
 
 export class RblSavingsParser implements StatementParser {
@@ -39,7 +43,8 @@ export class RblSavingsParser implements StatementParser {
     const metadata = this.extractMetadata(doc);
     const openingBalance = this.extractOpeningBalance(doc);
     const closingFromLine = this.extractClosingBalance(doc);
-    const rawTxns = this.extractRawTransactions(doc);
+    // PDF lists newest-first; reverse so balance deltas yield debit/credit.
+    const rawTxns = this.extractRawTransactions(doc).reverse();
 
     const transactions = rawTxns.map((raw, idx) =>
       this.finalizeTxn(raw, idx + 1, openingBalance, rawTxns.slice(0, idx)),
@@ -112,6 +117,7 @@ export class RblSavingsParser implements StatementParser {
   private extractRawTransactions(doc: ParsedDocument): RawTxn[] {
     const transactions: RawTxn[] = [];
     let current: RawTxn | null = null;
+    let pendingPrefix = "";
     let inHistory = false;
 
     for (const page of doc.pages) {
@@ -134,12 +140,23 @@ export class RblSavingsParser implements StatementParser {
 
         if (!inHistory) continue;
 
+        // Page stamp — flush current so following wrap lines attach to the
+        // next (older) row, not the previous one. Stay in history.
+        if (PAGE_FOOTER.test(trimmed)) {
+          if (current) {
+            transactions.push(current);
+            current = null;
+          }
+          continue;
+        }
+
         if (FOOTER_MARKERS.some((re) => re.test(trimmed))) {
           if (current) {
             transactions.push(current);
             current = null;
           }
           inHistory = false;
+          pendingPrefix = "";
           continue;
         }
 
@@ -148,8 +165,17 @@ export class RblSavingsParser implements StatementParser {
             transactions.push(current);
           }
           current = this.parseTransactionLine(trimmed);
+          if (pendingPrefix) {
+            current.narration = `${pendingPrefix} ${current.narration}`.trim();
+            pendingPrefix = "";
+          }
         } else if (current) {
           current.narration += " " + trimmed;
+        } else {
+          // Narration wrap that appears above the dated amount row.
+          pendingPrefix = pendingPrefix
+            ? `${pendingPrefix} ${trimmed}`
+            : trimmed;
         }
       }
     }

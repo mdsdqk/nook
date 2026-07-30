@@ -1,5 +1,165 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import { shiftIsoDate } from "./lib/dates";
+
+type SyncStatementArgs = {
+  userId: Id<"users">;
+  statementId: Id<"parsedStatements">;
+  bank: string;
+  accountFingerprint: string;
+  accountNumberMasked: string;
+  currency: string;
+  periodStart: string;
+  periodEnd: string;
+  openingBalance: number;
+  closingBalance: number;
+  transactions: Array<{
+    date: string;
+    narration: string;
+    debit?: number;
+    credit?: number;
+    externalKey: string;
+  }>;
+};
+
+type SyncStatementResult = {
+  accountId: Id<"accounts">;
+  assertionsUpserted: number;
+  transactionsUpserted: number;
+  transactionsSkipped: number;
+};
+
+export async function syncStatementToLedger(
+  ctx: MutationCtx,
+  args: SyncStatementArgs,
+): Promise<SyncStatementResult> {
+  let account = await ctx.db
+    .query("accounts")
+    .withIndex("by_fingerprint", (q) =>
+      q
+        .eq("userId", args.userId)
+        .eq("institution", args.bank)
+        .eq("accountFingerprint", args.accountFingerprint),
+    )
+    .first();
+
+  if (!account) {
+    const accountId = await ctx.db.insert("accounts", {
+      userId: args.userId,
+      name: `${args.bank} ${args.accountNumberMasked}`,
+      type: "asset.bank.savings",
+      institution: args.bank,
+      accountFingerprint: args.accountFingerprint,
+      accountNumberMasked: args.accountNumberMasked,
+      currency: args.currency,
+    });
+    account = (await ctx.db.get(accountId))!;
+  } else if (account.type === "asset.bank") {
+    await ctx.db.patch(account._id, { type: "asset.bank.savings" });
+    account = (await ctx.db.get(account._id))!;
+  }
+
+  const accountId = account._id;
+
+  const maxTxnDate =
+    args.transactions.length > 0
+      ? (args.transactions
+          .map((t) => t.date)
+          .sort((a, b) => a.localeCompare(b))
+          .at(-1) ?? args.periodEnd)
+      : args.periodEnd;
+  const openingAssertionDate = shiftIsoDate(args.periodStart, -1);
+  const closingAssertionDate =
+    maxTxnDate > args.periodEnd ? maxTxnDate : args.periodEnd;
+
+  let assertionsUpserted = 0;
+
+  for (const { date, balance } of [
+    { date: openingAssertionDate, balance: args.openingBalance },
+    { date: closingAssertionDate, balance: args.closingBalance },
+  ]) {
+    const existing = await ctx.db
+      .query("balanceAssertions")
+      .withIndex("by_account_date", (q) =>
+        q.eq("accountId", accountId).eq("date", date),
+      )
+      .first();
+
+    if (existing) {
+      if (existing.balance !== balance && existing.source === "statement") {
+        await ctx.db.patch(existing._id, { balance, source: "statement" });
+        assertionsUpserted++;
+      }
+    } else {
+      await ctx.db.insert("balanceAssertions", {
+        accountId,
+        date,
+        balance,
+        source: "statement",
+      });
+      assertionsUpserted++;
+    }
+  }
+
+  const existingForStatement = await ctx.db
+    .query("transactions")
+    .withIndex("by_statement", (q) => q.eq("statementId", args.statementId))
+    .collect();
+  for (const row of existingForStatement) {
+    await ctx.db.delete(row._id);
+  }
+
+  let transactionsUpserted = 0;
+  const transactionsSkipped = 0;
+
+  for (const txn of args.transactions) {
+    const existing = await ctx.db
+      .query("transactions")
+      .withIndex("by_user_external_key", (q) =>
+        q.eq("userId", args.userId).eq("externalKey", txn.externalKey),
+      )
+      .first();
+
+    const amount = txn.credit ?? txn.debit ?? 0;
+    const type = txn.credit ? "income" : "expense";
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        accountId,
+        date: txn.date,
+        type,
+        amount,
+        description: txn.narration,
+        narration: txn.narration,
+        source: "statement",
+        statementId: args.statementId,
+      });
+      transactionsUpserted++;
+    } else {
+      await ctx.db.insert("transactions", {
+        userId: args.userId,
+        accountId,
+        date: txn.date,
+        type,
+        amount,
+        description: txn.narration,
+        narration: txn.narration,
+        externalKey: txn.externalKey,
+        source: "statement",
+        statementId: args.statementId,
+      });
+      transactionsUpserted++;
+    }
+  }
+
+  return {
+    accountId,
+    assertionsUpserted,
+    transactionsUpserted,
+    transactionsSkipped,
+  };
+}
 
 export const syncFromStatement = mutation({
   args: {
@@ -30,147 +190,113 @@ export const syncFromStatement = mutation({
     transactionsSkipped: v.number(),
   }),
   handler: async (ctx, args) => {
-    // 1. Resolve or create account
-    let account = await ctx.db
-      .query("accounts")
-      .withIndex("by_fingerprint", (q) =>
-        q
-          .eq("userId", args.userId)
-          .eq("institution", args.bank)
-          .eq("accountFingerprint", args.accountFingerprint),
-      )
-      .first();
-
-    if (!account) {
-      const accountId = await ctx.db.insert("accounts", {
-        userId: args.userId,
-        name: `${args.bank} ${args.accountNumberMasked}`,
-        type: "asset.bank",
-        institution: args.bank,
-        accountFingerprint: args.accountFingerprint,
-        accountNumberMasked: args.accountNumberMasked,
-        currency: args.currency,
-      });
-      account = (await ctx.db.get(accountId))!;
-    }
-
-    const accountId = account._id;
-
-    // 2. Upsert balance assertions.
-    // Opening is asserted on the day before the statement period start so
-    // same-day transactions remain part of the explanatory interval.
-    // Closing is asserted at the later of periodEnd and max txn date to avoid
-    // double-counting entries posted after periodEnd but already included in
-    // statement closing balance.
-    const maxTxnDate =
-      args.transactions.length > 0
-        ? args.transactions
-            .map((t) => t.date)
-            .sort((a, b) => a.localeCompare(b))
-            .at(-1) ?? args.periodEnd
-        : args.periodEnd;
-    const openingAssertionDate = shiftIsoDate(args.periodStart, -1);
-    const closingAssertionDate =
-      maxTxnDate > args.periodEnd ? maxTxnDate : args.periodEnd;
-
-    let assertionsUpserted = 0;
-
-    for (const { date, balance } of [
-      { date: openingAssertionDate, balance: args.openingBalance },
-      { date: closingAssertionDate, balance: args.closingBalance },
-    ]) {
-      const existing = await ctx.db
-        .query("balanceAssertions")
-        .withIndex("by_account_date", (q) =>
-          q.eq("accountId", accountId).eq("date", date),
-        )
-        .first();
-
-      if (existing) {
-        // Never overwrite user-authored assertions. Only update statement-sourced rows.
-        if (existing.balance !== balance && existing.source === "statement") {
-          await ctx.db.patch(existing._id, { balance, source: "statement" });
-          assertionsUpserted++;
-        }
-      } else {
-        await ctx.db.insert("balanceAssertions", {
-          accountId,
-          date,
-          balance,
-          source: "statement",
-        });
-        assertionsUpserted++;
-      }
-    }
-
-    // 3. Refresh statement-linked ledger rows, then upsert by user+externalKey.
-    const existingForStatement = await ctx.db
-      .query("transactions")
-      .withIndex("by_statement", (q) => q.eq("statementId", args.statementId))
-      .collect();
-    for (const row of existingForStatement) {
-      await ctx.db.delete(row._id);
-    }
-
-    let transactionsUpserted = 0;
-    let transactionsSkipped = 0;
-
-    for (const txn of args.transactions) {
-      const existing = await ctx.db
-        .query("transactions")
-        .withIndex("by_user_external_key", (q) =>
-          q.eq("userId", args.userId).eq("externalKey", txn.externalKey),
-        )
-        .first();
-
-      if (existing) {
-        const amount = txn.credit ?? txn.debit ?? 0;
-        const type = txn.credit ? "income" : "expense";
-        await ctx.db.patch(existing._id, {
-          accountId,
-          date: txn.date,
-          type,
-          amount,
-          description: txn.narration,
-          narration: txn.narration,
-          source: "statement",
-          statementId: args.statementId,
-        });
-        transactionsUpserted++;
-      } else {
-        const amount = txn.credit ?? txn.debit ?? 0;
-        const type = txn.credit ? "income" : "expense";
-
-        await ctx.db.insert("transactions", {
-          userId: args.userId,
-          accountId,
-          date: txn.date,
-          type,
-          amount,
-          description: txn.narration,
-          narration: txn.narration,
-          externalKey: txn.externalKey,
-          source: "statement",
-          statementId: args.statementId,
-        });
-        transactionsUpserted++;
-      }
-    }
-
-    return {
-      accountId,
-      assertionsUpserted,
-      transactionsUpserted,
-      transactionsSkipped,
-    };
+    return await syncStatementToLedger(ctx, args);
   },
 });
 
-function shiftIsoDate(isoDate: string, deltaDays: number): string {
-  const [yearStr, monthStr, dayStr] = isoDate.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  const utcMs = Date.UTC(year, month - 1, day + deltaDays);
-  return new Date(utcMs).toISOString().slice(0, 10);
-}
+const unsyncedStatementValidator = v.object({
+  _id: v.id("parsedStatements"),
+  bank: v.string(),
+  periodStart: v.string(),
+  periodEnd: v.string(),
+  transactionCount: v.number(),
+  accountNumberMasked: v.string(),
+});
+
+export const listUnsynced = query({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.array(unsyncedStatementValidator),
+  handler: async (ctx, args) => {
+    const statements = await ctx.db
+      .query("parsedStatements")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const unsynced = [];
+    for (const statement of statements) {
+      const ledgerRow = await ctx.db
+        .query("transactions")
+        .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
+        .first();
+      if (!ledgerRow) {
+        unsynced.push({
+          _id: statement._id,
+          bank: statement.bank,
+          periodStart: statement.periodStart,
+          periodEnd: statement.periodEnd,
+          transactionCount: statement.transactionCount,
+          accountNumberMasked: statement.accountNumberMasked,
+        });
+      }
+    }
+    return unsynced;
+  },
+});
+
+export const syncPendingForUser = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.object({
+    statementsSynced: v.number(),
+    accountsTouched: v.number(),
+    transactionsUpserted: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const statements = await ctx.db
+      .query("parsedStatements")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    let statementsSynced = 0;
+    let transactionsUpserted = 0;
+    const accountsTouched = new Set<string>();
+
+    for (const statement of statements) {
+      const ledgerRow = await ctx.db
+        .query("transactions")
+        .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
+        .first();
+      if (ledgerRow) continue;
+
+      const parsedTxns = await ctx.db
+        .query("parsedTransactions")
+        .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
+        .collect();
+
+      parsedTxns.sort((a, b) => a.sequence - b.sequence);
+
+      const result = await syncStatementToLedger(ctx, {
+        userId: args.userId,
+        statementId: statement._id,
+        bank: statement.bank,
+        accountFingerprint: statement.accountFingerprint,
+        accountNumberMasked: statement.accountNumberMasked,
+        currency: statement.currency,
+        periodStart: statement.periodStart,
+        periodEnd: statement.periodEnd,
+        openingBalance: statement.openingBalance,
+        closingBalance: statement.closingBalance,
+        transactions: parsedTxns.map((txn) => ({
+          date: txn.date,
+          narration: txn.narration,
+          ...(txn.debit !== undefined ? { debit: txn.debit } : {}),
+          ...(txn.credit !== undefined ? { credit: txn.credit } : {}),
+          externalKey: txn.externalKey,
+        })),
+      });
+
+      statementsSynced++;
+      transactionsUpserted += result.transactionsUpserted;
+      accountsTouched.add(result.accountId);
+    }
+
+    return {
+      statementsSynced,
+      accountsTouched: accountsTouched.size,
+      transactionsUpserted,
+    };
+  },
+});
