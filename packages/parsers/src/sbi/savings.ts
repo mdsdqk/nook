@@ -23,6 +23,7 @@ import type {
  *   <narration type prefix, e.g. POS ATM PURCH / DEP TFR>
  *   DD/MM/YYYY DD/MM/YYYY <ref+particulars> - <debit> - <balance>   (debit)
  *   DD/MM/YYYY DD/MM/YYYY - - <credit> <balance>                   (credit)
+ *   DD/MM/YYYY DD/MM/YYYY <particulars> - - <credit> <balance>     (credit)
  *   <narration wrap>
  *   Page no. N
  *   Statement Summary : …
@@ -37,6 +38,9 @@ import type {
 const TXN_DATE = /^(\d{2}\/\d{2}\/\d{4})\b/;
 const CREDIT_LINE =
   /^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+-\s+-\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/;
+// Credit with particulars on the amount row: "... INTEREST CREDIT - - 152.00 20,179.27"
+const CREDIT_WITH_NARRATION =
+  /^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+-\s+-\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/;
 const DEBIT_LINE =
   /^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+-\s+([\d,]+\.\d{2})\s+-\s+([\d,]+\.\d{2})\s*$/;
 const AMOUNT = /[\d,]+\.\d{2}/g;
@@ -128,16 +132,18 @@ export class SbiSavingsParser implements StatementParser {
   private extractClosingBalance(doc: ParsedDocument): number | null {
     const text = this.normalizeText(doc.rawText);
 
-    const clear = text.match(/Clear\s+Balance\s*:?\s*([\d,]+\.\d{2})\s*CR/i);
-    if (clear?.[1]) {
-      return this.parseAmount(clear[1]);
-    }
-
+    // Prefer statement-summary closing — Clear Balance is often the live
+    // ledger balance at PDF generation time, not the period end.
     const values = text.match(
       /([\d,]+\.\d{2})\s*CR\s+\d+\s+\d+\s+[\d,]+\.\d{2}\s+[\d,]+\.\d{2}\s+([\d,]+\.\d{2})\s*CR/i,
     );
     if (values?.[2]) {
       return this.parseAmount(values[2]);
+    }
+
+    const clear = text.match(/Clear\s+Balance\s*:?\s*([\d,]+\.\d{2})\s*CR/i);
+    if (clear?.[1]) {
+      return this.parseAmount(clear[1]);
     }
 
     return null;
@@ -249,6 +255,17 @@ export class SbiSavingsParser implements StatementParser {
       };
     }
 
+    const creditNarr = text.match(CREDIT_WITH_NARRATION);
+    if (creditNarr) {
+      return {
+        date: creditNarr[1]!,
+        narration: creditNarr[3]!.trim(),
+        debit: null,
+        credit: this.parseAmount(creditNarr[4]!),
+        balance: this.parseAmount(creditNarr[5]!),
+      };
+    }
+
     const debit = text.match(DEBIT_LINE);
     if (debit) {
       return {
@@ -287,11 +304,15 @@ export class SbiSavingsParser implements StatementParser {
         ? afterDate
             .slice(0, lastTwo[0]!.index)
             .replace(/^\s*-\s*-\s*/, "")
+            .replace(/\s+-\s*-\s*$/, "")
             .replace(/\s+-\s*$/, "")
             .trim()
         : afterDate;
 
-    const isCredit = /^\s*-\s*-/.test(afterDate);
+    // Bare "- - amt bal" or narrated "… - - amt bal"
+    const isCredit =
+      /^\s*-\s*-/.test(afterDate) ||
+      /\s-\s-\s+[\d,]+\.\d{2}\s+[\d,]+\.\d{2}\s*$/.test(afterDate);
     return {
       date,
       narration,
