@@ -1,10 +1,15 @@
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowLeftRight,
+  ArrowUpRight,
+} from "lucide-react";
 import { Chip } from "@/components/ui/chip";
 import {
   formatTxnDate,
   initialsFromLabel,
   signedTransactionAmount,
   formatSignedMoney,
+  DEFAULT_CURRENCY,
 } from "@/lib/money/format";
 import type { MoneyAccount, MoneyTransaction } from "@/lib/money/types";
 import { cn } from "@/lib/utils";
@@ -29,7 +34,10 @@ export function TransactionRow({
     transaction.type,
     transaction.amount,
   );
-  const isIncome = signed > 0;
+  const isIncome = transaction.type === "income";
+  const isTransfer = transaction.type === "transfer";
+
+  const directionLabel = isTransfer ? "transfer" : isIncome ? "in" : "out";
 
   return (
     <button
@@ -66,7 +74,7 @@ export function TransactionRow({
             isIncome ? "text-secondary" : "text-white",
           )}
         >
-          {formatSignedMoney(signed, account?.currency ?? "USD")}
+          {formatSignedMoney(signed, account?.currency ?? DEFAULT_CURRENCY)}
         </span>
         <span className="mt-0.5 block text-label-caps text-on-surface/40">
           {formatTxnDate(transaction.date)}
@@ -76,14 +84,20 @@ export function TransactionRow({
       <span
         className={cn(
           "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-          isIncome ? "bg-secondary/10 text-secondary" : "bg-white/5 text-on-surface/50",
+          isTransfer
+            ? "bg-tertiary/10 text-tertiary"
+            : isIncome
+              ? "bg-secondary/10 text-secondary"
+              : "bg-error/10 text-error",
         )}
-        aria-hidden
+        aria-label={directionLabel}
       >
-        {isIncome ? (
-          <ArrowUpRight className="h-3.5 w-3.5" />
+        {isTransfer ? (
+          <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden />
+        ) : isIncome ? (
+          <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden />
         ) : (
-          <ArrowDownRight className="h-3.5 w-3.5" />
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         )}
       </span>
     </button>

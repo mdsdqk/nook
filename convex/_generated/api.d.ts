@@ -8,10 +8,17 @@
  * @module
  */
 
+import type * as accounts from "../accounts.js";
+import type * as assertions from "../assertions.js";
 import type * as convex__generated_api from "../convex/_generated/api.js";
 import type * as convex__generated_server from "../convex/_generated/server.js";
+import type * as dashboard from "../dashboard.js";
 import type * as ledgerSync from "../ledgerSync.js";
+import type * as lib_balances from "../lib/balances.js";
+import type * as lib_dates from "../lib/dates.js";
+import type * as lib_ownership from "../lib/ownership.js";
 import type * as statements from "../statements.js";
+import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -21,10 +28,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accounts: typeof accounts;
+  assertions: typeof assertions;
   "convex/_generated/api": typeof convex__generated_api;
   "convex/_generated/server": typeof convex__generated_server;
+  dashboard: typeof dashboard;
   ledgerSync: typeof ledgerSync;
+  "lib/balances": typeof lib_balances;
+  "lib/dates": typeof lib_dates;
+  "lib/ownership": typeof lib_ownership;
   statements: typeof statements;
+  transactions: typeof transactions;
   users: typeof users;
 }>;
 

@@ -48,6 +48,7 @@ yarn-error.log*
 sample_data/
 sample_data/*
 *_output*
+*_debug_*
 
 #TS
 *.tsbuildinfo

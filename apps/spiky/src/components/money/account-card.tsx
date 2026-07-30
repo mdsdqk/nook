@@ -3,8 +3,10 @@ import {
   PiggyBank,
   LineChart,
   CreditCard,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
+import { isBankAccountType } from "@nook/domain";
 import { cn } from "@/lib/utils";
 import { Chip } from "@/components/ui/chip";
 import {
@@ -23,8 +25,14 @@ function iconForAccount(account: MoneyAccount): {
   if (account.type === "asset.investment") {
     return { Icon: LineChart, tone: "bg-secondary/15 text-secondary" };
   }
-  if (/savings/i.test(account.name)) {
+  if (account.type === "asset.bank.savings") {
     return { Icon: PiggyBank, tone: "bg-tertiary/15 text-tertiary" };
+  }
+  if (
+    account.type === "asset.bank.current" ||
+    isBankAccountType(account.type)
+  ) {
+    return { Icon: Building2, tone: "bg-primary/15 text-primary" };
   }
   return { Icon: Wallet, tone: "bg-primary/15 text-primary" };
 }
@@ -36,7 +44,7 @@ type AccountCardProps = {
 
 export function AccountCard({ account, onClick }: AccountCardProps) {
   const { Icon, tone } = iconForAccount(account);
-  const kind = displayAccountKind(account.type, account.name);
+  const kind = displayAccountKind(account.type);
   const isNegative = account.balance < 0;
 
   return (

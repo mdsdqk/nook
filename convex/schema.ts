@@ -45,6 +45,7 @@ export default defineSchema({
   })
     .index("by_account", ["accountId"])
     .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "date"])
     .index("by_external_key", ["externalKey"])
     .index("by_statement", ["statementId"])
     .index("by_user_external_key", ["userId", "externalKey"]),

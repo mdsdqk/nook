@@ -12,9 +12,9 @@ import type {
 type AccountsSectionProps = {
   accounts: MoneyAccount[];
   totalBalance: number;
-  onCreate: (input: AccountInput) => void;
-  onUpdate: (id: string, input: AccountInput) => void;
-  onDelete: (id: string) => void;
+  onCreate: (input: AccountInput) => void | Promise<void>;
+  onUpdate: (id: string, input: AccountInput) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
 };
 
 export function AccountsSection({
@@ -74,14 +74,14 @@ export function AccountsSection({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         account={editing}
-        onSave={(input) => {
-          if (editing) onUpdate(editing.id, input);
-          else onCreate(input);
+        onSave={async (input) => {
+          if (editing) await onUpdate(editing.id, input);
+          else await onCreate(input);
         }}
         {...(editing
           ? {
-              onDelete: () => {
-                onDelete(editing.id);
+              onDelete: async () => {
+                await onDelete(editing.id);
               },
             }
           : {})}

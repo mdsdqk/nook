@@ -21,16 +21,37 @@ export function Dialog({
   className,
 }: DialogProps) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
+  const onOpenChangeRef = React.useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
 
   React.useEffect(() => {
     const el = dialogRef.current;
     if (!el) return;
 
-    if (open && !el.open) {
-      el.showModal();
-    } else if (!open && el.open) {
-      el.close();
-    }
+    const syncOpenState = () => {
+      try {
+        if (open && !el.open) {
+          el.showModal();
+        } else if (!open && el.open) {
+          el.close();
+        }
+      } catch {
+        // Native <dialog> can throw during HMR remounts when the element
+        // is detached from the document.
+      }
+    };
+
+    syncOpenState();
+
+    return () => {
+      if (el.open) {
+        try {
+          el.close();
+        } catch {
+          // Ignore close errors on unmount / Fast Refresh.
+        }
+      }
+    };
   }, [open]);
 
   return (
@@ -40,9 +61,16 @@ export function Dialog({
         "m-auto w-[min(100%-2rem,28rem)] rounded-lg border border-white/10 bg-surface-container-low p-0 text-on-surface shadow-2xl backdrop:bg-black/60 open:flex open:flex-col",
         className,
       )}
-      onClose={() => onOpenChange(false)}
+      onClose={() => {
+        // Avoid setState storms if Fast Refresh tears the dialog down.
+        if (dialogRef.current?.isConnected) {
+          onOpenChangeRef.current(false);
+        }
+      }}
       onClick={(event) => {
-        if (event.target === dialogRef.current) onOpenChange(false);
+        if (event.target === dialogRef.current) {
+          onOpenChangeRef.current(false);
+        }
       }}
     >
       <div className="flex items-start justify-between gap-3 border-b border-white/5 px-5 py-4">
@@ -57,7 +85,7 @@ export function Dialog({
           variant="ghost"
           size="icon"
           aria-label="Close"
-          onClick={() => onOpenChange(false)}
+          onClick={() => onOpenChangeRef.current(false)}
         >
           <X className="h-4 w-4" />
         </Button>

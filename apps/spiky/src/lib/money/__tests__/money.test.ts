@@ -72,7 +72,7 @@ describe("moneyStore", () => {
     const created = moneyStore.createAccount({
       name: "Cash Wallet",
       type: "asset.wallet",
-      currency: "USD",
+      currency: "INR",
       balance: 100,
     });
     expect(moneyStore.getSnapshot().accounts).toContainEqual(created);

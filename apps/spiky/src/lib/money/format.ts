@@ -1,9 +1,14 @@
+import { getAccountTypeLabel } from "@nook/domain";
+
+export const DEFAULT_CURRENCY = "INR";
+export const CURRENCY_LOCALE = "en-IN";
+
 const currencyFormatters = new Map<string, Intl.NumberFormat>();
 
 function formatter(currency: string): Intl.NumberFormat {
   let fmt = currencyFormatters.get(currency);
   if (!fmt) {
-    fmt = new Intl.NumberFormat("en-US", {
+    fmt = new Intl.NumberFormat(CURRENCY_LOCALE, {
       style: "currency",
       currency,
       minimumFractionDigits: 2,
@@ -14,14 +19,23 @@ function formatter(currency: string): Intl.NumberFormat {
   return fmt;
 }
 
-export function formatMoney(amount: number, currency = "USD"): string {
+export function formatMoney(
+  amount: number,
+  currency = DEFAULT_CURRENCY,
+): string {
   return formatter(currency).format(amount);
 }
 
-export function formatSignedMoney(amount: number, currency = "USD"): string {
+export function formatSignedMoney(
+  amount: number,
+  currency = DEFAULT_CURRENCY,
+): string {
   const abs = formatMoney(Math.abs(amount), currency);
   if (amount > 0) return `+${abs}`;
-  if (amount < 0) return `-${abs.replace(/^-/, "")}`;
+  if (amount < 0) {
+    // en-IN already prefixes ₹; keep a leading minus for signed display.
+    return `-${abs.replace(/^-/, "")}`;
+  }
   return abs;
 }
 
@@ -36,7 +50,7 @@ export function signedTransactionAmount(
 
 export function formatTxnDate(isoDate: string): string {
   const date = new Date(`${isoDate}T12:00:00`);
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(CURRENCY_LOCALE, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -51,30 +65,10 @@ export function initialsFromLabel(label: string): string {
 }
 
 export function accountTypeLabel(type: string): string {
-  switch (type) {
-    case "asset.bank":
-      return "Checking";
-    case "asset.investment":
-      return "Investment";
-    case "liability.credit_card":
-      return "Credit";
-    case "asset.cash":
-      return "Cash";
-    case "asset.wallet":
-      return "Wallet";
-    case "liability.loan":
-      return "Loan";
-    default:
-      return type.split(".").pop() ?? type;
-  }
+  return getAccountTypeLabel(type);
 }
 
-/** Savings heuristic: bank account whose name mentions savings. */
-export function displayAccountKind(
-  type: string,
-  name: string,
-): string {
-  if (type === "asset.bank" && /savings/i.test(name)) return "Savings";
-  if (type === "asset.bank") return "Checking";
-  return accountTypeLabel(type);
+/** Display chip label from the domain registry (no name heuristics). */
+export function displayAccountKind(type: string): string {
+  return getAccountTypeLabel(type);
 }

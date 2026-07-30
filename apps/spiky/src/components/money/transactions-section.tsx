@@ -17,9 +17,9 @@ type TransactionsSectionProps = {
   transactions: MoneyTransaction[];
   filters: TransactionFilters;
   onFiltersChange: (next: TransactionFilters) => void;
-  onCreate: (input: TransactionInput) => void;
-  onUpdate: (id: string, input: TransactionInput) => void;
-  onDelete: (id: string) => void;
+  onCreate: (input: TransactionInput) => void | Promise<void>;
+  onUpdate: (id: string, input: TransactionInput) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
 };
 
 export function TransactionsSection({
@@ -93,14 +93,14 @@ export function TransactionsSection({
         onOpenChange={setDialogOpen}
         transaction={editing}
         accounts={accounts}
-        onSave={(input) => {
-          if (editing) onUpdate(editing.id, input);
-          else onCreate(input);
+        onSave={async (input) => {
+          if (editing) await onUpdate(editing.id, input);
+          else await onCreate(input);
         }}
         {...(editing
           ? {
-              onDelete: () => {
-                onDelete(editing.id);
+              onDelete: async () => {
+                await onDelete(editing.id);
               },
             }
           : {})}

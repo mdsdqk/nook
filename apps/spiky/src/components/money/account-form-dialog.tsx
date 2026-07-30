@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AccountType } from "@nook/domain";
-import { ACCOUNT_TYPE_REGISTRY } from "@nook/domain";
+import {
+  ACCOUNT_TYPE_REGISTRY,
+  getSelectableAccountTypes,
+} from "@nook/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,26 +13,25 @@ import {
   Select,
 } from "@/components/ui/dialog";
 import type { AccountInput, MoneyAccount } from "@/lib/money/types";
+import { DEFAULT_CURRENCY } from "@/lib/money/format";
 
-const ACCOUNT_TYPE_OPTIONS = (
-  Object.keys(ACCOUNT_TYPE_REGISTRY) as AccountType[]
-).filter((type) => ACCOUNT_TYPE_REGISTRY[type].parent !== null);
+const ACCOUNT_TYPE_OPTIONS = getSelectableAccountTypes();
 
 type AccountFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account?: MoneyAccount | null;
-  onSave: (input: AccountInput) => void;
-  onDelete?: () => void;
+  onSave: (input: AccountInput) => void | Promise<void>;
+  onDelete?: () => void | Promise<void>;
 };
 
 function toInput(account?: MoneyAccount | null): AccountInput {
   return {
     name: account?.name ?? "",
-    type: account?.type ?? "asset.bank",
+    type: account?.type ?? "asset.bank.savings",
     institution: account?.institution ?? "",
     accountNumberMasked: account?.accountNumberMasked ?? "",
-    currency: account?.currency ?? "USD",
+    currency: account?.currency ?? DEFAULT_CURRENCY,
     balance: account?.balance ?? 0,
   };
 }
@@ -44,14 +46,16 @@ export function AccountFormDialog({
   const isEdit = Boolean(account);
   const [form, setForm] = useState<AccountInput>(() => toInput(account));
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setForm(toInput(account));
     setError(null);
+    setSaving(false);
   }, [open, account]);
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!form.name.trim()) {
       setError("Name is required");
@@ -67,8 +71,16 @@ export function AccountFormDialog({
     if (institution) input.institution = institution;
     const masked = form.accountNumberMasked?.trim();
     if (masked) input.accountNumberMasked = masked;
-    onSave(input);
-    onOpenChange(false);
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(input);
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -76,7 +88,7 @@ export function AccountFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit account" : "Add account"}
-      description="Balances update locally in this spike."
+      description="Account details are saved to your Convex ledger."
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div>
@@ -165,15 +177,22 @@ export function AccountFormDialog({
               type="button"
               variant="ghost"
               className="mr-auto text-error hover:text-error"
+              disabled={saving}
               onClick={() => {
-                try {
-                  onDelete();
-                  onOpenChange(false);
-                } catch (err) {
-                  setError(
-                    err instanceof Error ? err.message : "Delete failed",
-                  );
-                }
+                void (async () => {
+                  setSaving(true);
+                  setError(null);
+                  try {
+                    await onDelete();
+                    onOpenChange(false);
+                  } catch (err) {
+                    setError(
+                      err instanceof Error ? err.message : "Delete failed",
+                    );
+                  } finally {
+                    setSaving(false);
+                  }
+                })();
               }}
             >
               Delete
@@ -182,11 +201,14 @@ export function AccountFormDialog({
           <Button
             type="button"
             variant="secondary"
+            disabled={saving}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="submit">{isEdit ? "Save" : "Create"}</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving…" : isEdit ? "Save" : "Create"}
+          </Button>
         </DialogFooter>
       </form>
     </Dialog>

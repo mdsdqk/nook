@@ -28,8 +28,8 @@ type TransactionFormDialogProps = {
   onOpenChange: (open: boolean) => void;
   transaction?: MoneyTransaction | null;
   accounts: MoneyAccount[];
-  onSave: (input: TransactionInput) => void;
-  onDelete?: () => void;
+  onSave: (input: TransactionInput) => void | Promise<void>;
+  onDelete?: () => void | Promise<void>;
 };
 
 function toInput(
@@ -62,14 +62,16 @@ export function TransactionFormDialog({
     toInput(transaction, accounts),
   );
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setForm(toInput(transaction, accounts));
     setError(null);
+    setSaving(false);
   }, [open, transaction, accounts]);
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!form.accountId) {
       setError("Account is required");
@@ -95,8 +97,16 @@ export function TransactionFormDialog({
     if (category) input.category = category;
     const notes = form.notes?.trim();
     if (notes) input.notes = notes;
-    onSave(input);
-    onOpenChange(false);
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(input);
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -104,7 +114,7 @@ export function TransactionFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit transaction" : "Add transaction"}
-      description="Changes apply to the local mock store."
+      description="Changes are saved to your Convex ledger."
       className="w-[min(100%-2rem,32rem)]"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -244,9 +254,22 @@ export function TransactionFormDialog({
               type="button"
               variant="ghost"
               className="mr-auto text-error hover:text-error"
+              disabled={saving}
               onClick={() => {
-                onDelete();
-                onOpenChange(false);
+                void (async () => {
+                  setSaving(true);
+                  setError(null);
+                  try {
+                    await onDelete();
+                    onOpenChange(false);
+                  } catch (err) {
+                    setError(
+                      err instanceof Error ? err.message : "Delete failed",
+                    );
+                  } finally {
+                    setSaving(false);
+                  }
+                })();
               }}
             >
               Delete
@@ -255,11 +278,14 @@ export function TransactionFormDialog({
           <Button
             type="button"
             variant="secondary"
+            disabled={saving}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="submit">{isEdit ? "Save" : "Create"}</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving…" : isEdit ? "Save" : "Create"}
+          </Button>
         </DialogFooter>
       </form>
     </Dialog>
