@@ -17,8 +17,11 @@ import type * as ledgerSync from "../ledgerSync.js";
 import type * as lib_balances from "../lib/balances.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_ownership from "../lib/ownership.js";
+import type * as lib_transferLinks from "../lib/transferLinks.js";
+import type * as lib_transferMatch from "../lib/transferMatch.js";
 import type * as statements from "../statements.js";
 import type * as transactions from "../transactions.js";
+import type * as transferSync from "../transferSync.js";
 import type * as users from "../users.js";
 
 import type {
@@ -37,8 +40,11 @@ declare const fullApi: ApiFromModules<{
   "lib/balances": typeof lib_balances;
   "lib/dates": typeof lib_dates;
   "lib/ownership": typeof lib_ownership;
+  "lib/transferLinks": typeof lib_transferLinks;
+  "lib/transferMatch": typeof lib_transferMatch;
   statements: typeof statements;
   transactions: typeof transactions;
+  transferSync: typeof transferSync;
   users: typeof users;
 }>;
 

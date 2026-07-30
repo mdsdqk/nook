@@ -14,6 +14,8 @@ export interface MoneyAccount {
   balance: number;
 }
 
+export type TransferRole = "out" | "in";
+
 /** Mirrors Convex `transactions` including metadata fields. */
 export interface MoneyTransaction {
   id: string;
@@ -30,6 +32,21 @@ export interface MoneyTransaction {
   externalKey?: string;
   source?: string;
   statementId?: string;
+  linkedTransactionId?: string;
+  transferRole?: TransferRole;
+}
+
+/** A newly synced transfer pair returned for review. */
+export interface SyncedTransferPair {
+  outId: string;
+  inId: string;
+  amount: number;
+  outAccountId: string;
+  inAccountId: string;
+  outDate: string;
+  inDate: string;
+  outDescription?: string;
+  inDescription?: string;
 }
 
 export interface CashFlowPoint {

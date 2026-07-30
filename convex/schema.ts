@@ -42,13 +42,16 @@ export default defineSchema({
     externalKey: v.optional(v.string()),
     source: v.optional(v.string()),
     statementId: v.optional(v.id("parsedStatements")),
+    linkedTransactionId: v.optional(v.id("transactions")),
+    transferRole: v.optional(v.union(v.literal("out"), v.literal("in"))),
   })
     .index("by_account", ["accountId"])
     .index("by_user", ["userId"])
     .index("by_user_date", ["userId", "date"])
     .index("by_external_key", ["externalKey"])
     .index("by_statement", ["statementId"])
-    .index("by_user_external_key", ["userId", "externalKey"]),
+    .index("by_user_external_key", ["userId", "externalKey"])
+    .index("by_linked", ["linkedTransactionId"]),
 
   parsedStatements: defineTable({
     userId: v.id("users"),

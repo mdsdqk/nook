@@ -81,6 +81,8 @@ export function MoneyPage() {
               onCreate={money.createTransaction}
               onUpdate={(id, input) => money.updateTransaction(id, input)}
               onDelete={money.deleteTransaction}
+              onSyncTransfers={money.syncTransfers}
+              onRejectTransferPairs={money.rejectTransferPairs}
             />
           </>
         )}

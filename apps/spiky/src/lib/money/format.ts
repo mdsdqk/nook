@@ -39,12 +39,14 @@ export function formatSignedMoney(
   return abs;
 }
 
-/** Display amount for a ledger transaction: income positive, expense/transfer negative. */
+/** Display amount for a ledger transaction: income / transfer-in positive; else negative. */
 export function signedTransactionAmount(
   type: string,
   amount: number,
+  transferRole?: "out" | "in",
 ): number {
   if (type === "income") return amount;
+  if (type === "transfer" && transferRole === "in") return amount;
   return -Math.abs(amount);
 }
 

@@ -10,6 +10,7 @@ import type {
   CashFlowPoint,
   MoneyAccount,
   MoneyTransaction,
+  SyncedTransferPair,
   TransactionFilters,
   TransactionInput,
 } from "./types";
@@ -69,6 +70,8 @@ function mapTransaction(doc: {
   externalKey?: string;
   source?: string;
   statementId?: Id<"parsedStatements">;
+  linkedTransactionId?: Id<"transactions">;
+  transferRole?: "out" | "in";
 }): MoneyTransaction {
   const txn: MoneyTransaction = {
     id: doc._id,
@@ -86,6 +89,10 @@ function mapTransaction(doc: {
   if (doc.externalKey !== undefined) txn.externalKey = doc.externalKey;
   if (doc.source !== undefined) txn.source = doc.source;
   if (doc.statementId !== undefined) txn.statementId = doc.statementId;
+  if (doc.linkedTransactionId !== undefined) {
+    txn.linkedTransactionId = doc.linkedTransactionId;
+  }
+  if (doc.transferRole !== undefined) txn.transferRole = doc.transferRole;
   return txn;
 }
 
@@ -130,6 +137,10 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
   const updateTxnMut = useMutation(api.transactions.update);
   const removeTxnMut = useMutation(api.transactions.remove);
   const syncPendingMut = useMutation(api.ledgerSync.syncPendingForUser);
+  const syncTransfersMut = useMutation(api.transferSync.syncTransfers);
+  const rejectTransferPairsMut = useMutation(
+    api.transferSync.rejectTransferPairs,
+  );
 
   const [syncPending, setSyncPending] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -335,6 +346,41 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
     }
   }, [userId, syncPendingMut]);
 
+  const syncTransfers = useCallback(async (): Promise<SyncedTransferPair[]> => {
+    if (!userId) throw new Error("Not authenticated");
+    const result = await syncTransfersMut({ userId });
+    return result.pairs.map((pair) => {
+      const mapped: SyncedTransferPair = {
+        outId: pair.outId,
+        inId: pair.inId,
+        amount: pair.amount,
+        outAccountId: pair.outAccountId,
+        inAccountId: pair.inAccountId,
+        outDate: pair.outDate,
+        inDate: pair.inDate,
+      };
+      if (pair.outDescription !== undefined) {
+        mapped.outDescription = pair.outDescription;
+      }
+      if (pair.inDescription !== undefined) {
+        mapped.inDescription = pair.inDescription;
+      }
+      return mapped;
+    });
+  }, [userId, syncTransfersMut]);
+
+  const rejectTransferPairs = useCallback(
+    async (outIds: string[]) => {
+      if (!userId) throw new Error("Not authenticated");
+      if (outIds.length === 0) return;
+      await rejectTransferPairsMut({
+        userId,
+        outIds: outIds as Id<"transactions">[],
+      });
+    },
+    [userId, rejectTransferPairsMut],
+  );
+
   return {
     accounts,
     transactions,
@@ -355,5 +401,7 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
     updateTransaction,
     deleteTransaction,
     syncPendingStatements,
+    syncTransfers,
+    rejectTransferPairs,
   };
 }

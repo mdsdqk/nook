@@ -49,6 +49,24 @@ function toInput(
   };
 }
 
+const LINKED_EDIT_WARNING =
+  "This is a linked transfer. Changing the account, type, or amount will unlink the pair and restore the other transaction to income or expense. Continue?";
+
+const LINKED_DELETE_WARNING =
+  "This is a linked transfer. Deleting it will unlink the other transaction and restore it to income or expense. Continue?";
+
+function breaksLinkedTransfer(
+  original: MoneyTransaction,
+  next: TransactionInput,
+): boolean {
+  if (!original.linkedTransactionId) return false;
+  return (
+    next.accountId !== original.accountId ||
+    next.type !== original.type ||
+    next.amount !== original.amount
+  );
+}
+
 export function TransactionFormDialog({
   open,
   onOpenChange,
@@ -58,6 +76,7 @@ export function TransactionFormDialog({
   onDelete,
 }: TransactionFormDialogProps) {
   const isEdit = Boolean(transaction);
+  const isLinked = Boolean(transaction?.linkedTransactionId);
   const [form, setForm] = useState<TransactionInput>(() =>
     toInput(transaction, accounts),
   );
@@ -97,6 +116,11 @@ export function TransactionFormDialog({
     if (category) input.category = category;
     const notes = form.notes?.trim();
     if (notes) input.notes = notes;
+
+    if (transaction && breaksLinkedTransfer(transaction, input)) {
+      if (!window.confirm(LINKED_EDIT_WARNING)) return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -118,6 +142,15 @@ export function TransactionFormDialog({
       className="w-[min(100%-2rem,32rem)]"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        {isLinked ? (
+          <p
+            className="rounded-md border border-tertiary/30 bg-tertiary/10 px-3 py-2 text-body-sm text-on-surface/80"
+            role="status"
+          >
+            Linked transfer — editing account, type, or amount (or deleting)
+            will affect the paired transaction.
+          </p>
+        ) : null}
         <div>
           <FieldLabel htmlFor="txn-account">Account</FieldLabel>
           <Select
@@ -257,6 +290,9 @@ export function TransactionFormDialog({
               disabled={saving}
               onClick={() => {
                 void (async () => {
+                  if (isLinked && !window.confirm(LINKED_DELETE_WARNING)) {
+                    return;
+                  }
                   setSaving(true);
                   setError(null);
                   try {
