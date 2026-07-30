@@ -4,3 +4,8 @@ export * from "./assertion";
 export * from "./cashflow";
 export * from "./balance";
 export * from "./transfer-match";
+export * from "./wealth-source";
+export * from "./instrument";
+export * from "./asset-transaction";
+export * from "./holding";
+export * from "./portfolio";
