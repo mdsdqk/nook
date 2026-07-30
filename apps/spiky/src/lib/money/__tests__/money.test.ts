@@ -13,26 +13,27 @@ const baseFilters: TransactionFilters = {
 };
 
 describe("signedTransactionAmount", () => {
-  it("signs income positive and expense negative", () => {
-    expect(signedTransactionAmount("income", 12.5)).toBe(12.5);
-    expect(signedTransactionAmount("expense", 12.5)).toBe(-12.5);
-  });
-
-  it("signs transfer legs by role", () => {
-    expect(signedTransactionAmount("transfer", 100, "out")).toBe(-100);
-    expect(signedTransactionAmount("transfer", 100, "in")).toBe(100);
-    expect(signedTransactionAmount("transfer", 100)).toBe(-100);
+  it("signs credit positive and debit negative", () => {
+    expect(signedTransactionAmount("credit", 12.5)).toBe(12.5);
+    expect(signedTransactionAmount("debit", 12.5)).toBe(-12.5);
   });
 });
 
 describe("filterTransactions", () => {
-  it("filters by type", () => {
+  it("filters by type group", () => {
     const income = filterTransactions(SEED_TRANSACTIONS, SEED_ACCOUNTS, {
       ...baseFilters,
       type: "income",
     });
-    expect(income.every((t) => t.type === "income")).toBe(true);
+    expect(income.every((t) => t.type === "salary")).toBe(true);
     expect(income.length).toBeGreaterThan(0);
+
+    const expense = filterTransactions(SEED_TRANSACTIONS, SEED_ACCOUNTS, {
+      ...baseFilters,
+      type: "expense",
+    });
+    expect(expense.every((t) => t.type === "expense")).toBe(true);
+    expect(expense.length).toBeGreaterThan(0);
   });
 
   it("filters by account", () => {
@@ -109,6 +110,7 @@ describe("moneyStore", () => {
     moneyStore.createTransaction({
       accountId: "acct_chase_checking",
       date: "2026-07-29",
+      direction: "debit",
       type: "expense",
       amount: 10,
       description: "Coffee",

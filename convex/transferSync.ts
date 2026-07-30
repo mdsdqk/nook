@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { matchTransferPairs } from "@nook/domain";
 import { mutation } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { unlinkTransferPair } from "./lib/transferLinks";
 
 const syncedPairValidator = v.object({
@@ -18,6 +19,46 @@ const syncedPairValidator = v.object({
 
 function pairLabel(txn: Doc<"transactions">): string | undefined {
   return txn.description ?? txn.merchant ?? txn.narration;
+}
+
+async function linkTransferLeg(
+  ctx: MutationCtx,
+  txn: Doc<"transactions">,
+  link: {
+    type: "internal_transfer";
+    direction: "credit" | "debit";
+    transferRole: "out" | "in";
+    linkedTransactionId: Id<"transactions">;
+  },
+): Promise<void> {
+  if (txn.category === "Transfer") {
+    const {
+      _id: _ignoredId,
+      _creationTime: _ignoredCreation,
+      linkedTransactionId: _linked,
+      transferRole: _role,
+      category: _category,
+      ...rest
+    } = txn;
+    await ctx.db.replace(txn._id, {
+      ...rest,
+      ...link,
+    });
+    return;
+  }
+
+  await ctx.db.patch(txn._id, link);
+}
+
+function isLinkedTransferOut(txn: Doc<"transactions">): txn is Doc<"transactions"> & {
+  transferRole: "out";
+  linkedTransactionId: Id<"transactions">;
+} {
+  return (
+    (txn.type === "internal_transfer" || txn.type === "transfer") &&
+    txn.transferRole === "out" &&
+    txn.linkedTransactionId !== undefined
+  );
 }
 
 export const syncTransfers = mutation({
@@ -53,6 +94,7 @@ export const syncTransfers = mutation({
           type: txn.type,
           amount: txn.amount,
           currency,
+          ...(txn.direction !== undefined ? { direction: txn.direction } : {}),
           ...(txn.transferRole !== undefined
             ? { transferRole: txn.transferRole }
             : {}),
@@ -74,15 +116,15 @@ export const syncTransfers = mutation({
       const inTxn = byId.get(inId);
       if (!outTxn || !inTxn) continue;
 
-      await ctx.db.patch(outId, {
-        type: "transfer",
-        category: "Transfer",
+      await linkTransferLeg(ctx, outTxn, {
+        type: "internal_transfer",
+        direction: "debit",
         transferRole: "out",
         linkedTransactionId: inId,
       });
-      await ctx.db.patch(inId, {
-        type: "transfer",
-        category: "Transfer",
+      await linkTransferLeg(ctx, inTxn, {
+        type: "internal_transfer",
+        direction: "credit",
         transferRole: "in",
         linkedTransactionId: outId,
       });
@@ -119,11 +161,7 @@ export const rejectTransferPairs = mutation({
       if (!outTxn || outTxn.userId !== args.userId) {
         throw new Error("Transfer pair not found");
       }
-      if (
-        outTxn.type !== "transfer" ||
-        outTxn.transferRole !== "out" ||
-        outTxn.linkedTransactionId === undefined
-      ) {
+      if (!isLinkedTransferOut(outTxn)) {
         throw new Error("Transaction is not a linked transfer out leg");
       }
 

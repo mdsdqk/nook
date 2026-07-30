@@ -1,3 +1,4 @@
+import { isCashflowIn, isSpending, isTransactionType } from "@nook/domain";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 
@@ -37,9 +38,13 @@ export const cashflowTimeline = query({
     const buckets = new Map<string, number>();
 
     for (const txn of txns) {
-      if (txn.type !== "income" && txn.type !== "expense") continue;
+      if (!isTransactionType(txn.type)) continue;
+      if (!isSpending(txn.type) && !isCashflowIn(txn.type)) continue;
       const key = txn.date.slice(0, 7); // YYYY-MM
-      const delta = txn.type === "income" ? txn.amount : -txn.amount;
+      const direction =
+        txn.direction ??
+        (isCashflowIn(txn.type) ? ("credit" as const) : ("debit" as const));
+      const delta = direction === "credit" ? txn.amount : -txn.amount;
       buckets.set(key, (buckets.get(key) ?? 0) + delta);
     }
 

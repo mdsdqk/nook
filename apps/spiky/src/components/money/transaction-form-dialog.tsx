@@ -1,8 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  TRANSACTION_CATEGORIES,
+  SUGGESTED_CATEGORIES,
   TRANSACTION_TYPE_REGISTRY,
+  TRANSACTION_TYPES,
+  type TransactionDirection,
   type TransactionType,
+  type TransactionTypeGroup,
 } from "@nook/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +22,35 @@ import type {
   TransactionInput,
 } from "@/lib/money/types";
 
-const TYPE_OPTIONS = (
-  Object.keys(TRANSACTION_TYPE_REGISTRY) as TransactionType[]
-).filter((t) => t !== "obligation");
+const GROUP_ORDER: TransactionTypeGroup[] = [
+  "income",
+  "expense",
+  "transfer",
+  "investment",
+  "debt",
+  "tax",
+  "insurance",
+  "fees",
+];
+
+const GROUP_LABELS: Record<TransactionTypeGroup, string> = {
+  income: "Income",
+  expense: "Expense",
+  transfer: "Transfer",
+  investment: "Investment",
+  debt: "Debt",
+  tax: "Tax",
+  insurance: "Insurance",
+  fees: "Fees",
+};
+
+const TYPE_OPTIONS_BY_GROUP = GROUP_ORDER.map((group) => ({
+  group,
+  label: GROUP_LABELS[group],
+  types: TRANSACTION_TYPES.filter(
+    (type) => TRANSACTION_TYPE_REGISTRY[type].group === group,
+  ),
+}));
 
 type TransactionFormDialogProps = {
   open: boolean;
@@ -39,21 +68,22 @@ function toInput(
   return {
     accountId: transaction?.accountId ?? accounts[0]?.id ?? "",
     date: transaction?.date ?? new Date().toISOString().slice(0, 10),
+    direction: transaction?.direction ?? "debit",
     type: transaction?.type ?? "expense",
     amount: transaction?.amount ?? 0,
     description: transaction?.description ?? "",
     narration: transaction?.narration ?? "",
     merchant: transaction?.merchant ?? "",
-    category: transaction?.category ?? "Other",
+    category: transaction?.category ?? "",
     notes: transaction?.notes ?? "",
   };
 }
 
 const LINKED_EDIT_WARNING =
-  "This is a linked transfer. Changing the account, type, or amount will unlink the pair and restore the other transaction to income or expense. Continue?";
+  "This is a linked transfer. Changing the account, type, direction, or amount will unlink the pair and restore the other transaction. Continue?";
 
 const LINKED_DELETE_WARNING =
-  "This is a linked transfer. Deleting it will unlink the other transaction and restore it to income or expense. Continue?";
+  "This is a linked transfer. Deleting it will unlink the other transaction and restore it. Continue?";
 
 function breaksLinkedTransfer(
   original: MoneyTransaction,
@@ -63,6 +93,7 @@ function breaksLinkedTransfer(
   return (
     next.accountId !== original.accountId ||
     next.type !== original.type ||
+    next.direction !== original.direction ||
     next.amount !== original.amount
   );
 }
@@ -82,6 +113,14 @@ export function TransactionFormDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const categoryOptions = useMemo(() => {
+    const current = form.category?.trim();
+    if (current && !(SUGGESTED_CATEGORIES as readonly string[]).includes(current)) {
+      return [current, ...SUGGESTED_CATEGORIES];
+    }
+    return ["", ...SUGGESTED_CATEGORIES];
+  }, [form.category]);
 
   useEffect(() => {
     if (!open) return;
@@ -103,6 +142,7 @@ export function TransactionFormDialog({
     const input: TransactionInput = {
       accountId: form.accountId,
       date: form.date,
+      direction: form.direction,
       type: form.type,
       amount: form.amount,
     };
@@ -112,8 +152,8 @@ export function TransactionFormDialog({
     if (narration) input.narration = narration;
     const merchant = form.merchant?.trim();
     if (merchant) input.merchant = merchant;
-    const category = form.category?.trim();
-    if (category) input.category = category;
+    // Always send category so "None" can clear an existing value on update.
+    input.category = form.category?.trim() ?? "";
     const notes = form.notes?.trim();
     if (notes) input.notes = notes;
 
@@ -147,8 +187,8 @@ export function TransactionFormDialog({
             className="rounded-md border border-tertiary/30 bg-tertiary/10 px-3 py-2 text-body-sm text-on-surface/80"
             role="status"
           >
-            Linked transfer — editing account, type, or amount (or deleting)
-            will affect the paired transaction.
+            Linked transfer — editing account, type, direction, or amount (or
+            deleting) will affect the paired transaction.
           </p>
         ) : null}
         <div>
@@ -170,22 +210,19 @@ export function TransactionFormDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <FieldLabel htmlFor="txn-type">Type</FieldLabel>
+            <FieldLabel htmlFor="txn-direction">Direction</FieldLabel>
             <Select
-              id="txn-type"
-              value={form.type}
+              id="txn-direction"
+              value={form.direction}
               onChange={(e) =>
                 setForm((f) => ({
                   ...f,
-                  type: e.target.value as TransactionType,
+                  direction: e.target.value as TransactionDirection,
                 }))
               }
             >
-              {TYPE_OPTIONS.map((type) => (
-                <option key={type} value={type}>
-                  {TRANSACTION_TYPE_REGISTRY[type].label}
-                </option>
-              ))}
+              <option value="debit">Debit</option>
+              <option value="credit">Credit</option>
             </Select>
           </div>
           <div>
@@ -205,6 +242,30 @@ export function TransactionFormDialog({
               required
             />
           </div>
+        </div>
+
+        <div>
+          <FieldLabel htmlFor="txn-type">Type</FieldLabel>
+          <Select
+            id="txn-type"
+            value={form.type}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                type: e.target.value as TransactionType,
+              }))
+            }
+          >
+            {TYPE_OPTIONS_BY_GROUP.map(({ group, label, types }) => (
+              <optgroup key={group} label={label}>
+                {types.map((type) => (
+                  <option key={type} value={type}>
+                    {TRANSACTION_TYPE_REGISTRY[type].label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </Select>
         </div>
 
         <div>
@@ -244,14 +305,14 @@ export function TransactionFormDialog({
           <FieldLabel htmlFor="txn-category">Category</FieldLabel>
           <Select
             id="txn-category"
-            value={form.category ?? "Other"}
+            value={form.category ?? ""}
             onChange={(e) =>
               setForm((f) => ({ ...f, category: e.target.value }))
             }
           >
-            {TRANSACTION_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
+            {categoryOptions.map((category) => (
+              <option key={category || "__none"} value={category}>
+                {category || "None"}
               </option>
             ))}
           </Select>

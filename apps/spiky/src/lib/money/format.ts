@@ -1,4 +1,5 @@
-import { getAccountTypeLabel } from "@nook/domain";
+import { getAccountTypeLabel, signedAmount } from "@nook/domain";
+import type { TransactionDirection } from "@nook/domain";
 
 export const DEFAULT_CURRENCY = "INR";
 export const CURRENCY_LOCALE = "en-IN";
@@ -39,15 +40,12 @@ export function formatSignedMoney(
   return abs;
 }
 
-/** Display amount for a ledger transaction: income / transfer-in positive; else negative. */
+/** Display amount from objective direction (amount is always positive magnitude). */
 export function signedTransactionAmount(
-  type: string,
+  direction: TransactionDirection,
   amount: number,
-  transferRole?: "out" | "in",
 ): number {
-  if (type === "income") return amount;
-  if (type === "transfer" && transferRole === "in") return amount;
-  return -Math.abs(amount);
+  return signedAmount(direction, Math.abs(amount));
 }
 
 export function formatTxnDate(isoDate: string): string {

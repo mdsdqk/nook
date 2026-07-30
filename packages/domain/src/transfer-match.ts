@@ -1,3 +1,5 @@
+import type { TransactionDirection } from "./transaction";
+
 export type TransferRole = "out" | "in";
 
 export const TRANSFER_MATCH_DATE_WINDOW_DAYS = 3;
@@ -10,6 +12,7 @@ export type MatchableTransaction = {
   type: string;
   amount: number;
   currency: string;
+  direction?: TransactionDirection;
   transferRole?: TransferRole;
   linkedTransactionId?: string;
 };
@@ -27,17 +30,47 @@ export function dateDiffDays(a: string, b: string): number {
   return Math.round((aMs - bMs) / (24 * 60 * 60 * 1000));
 }
 
+function isInternalTransferType(type: string): boolean {
+  return type === "internal_transfer" || type === "transfer";
+}
+
+/**
+ * Debit legs (or unmatched internal_transfer out) can be transfer-out candidates.
+ * Unclassified expense-like debits are eligible so statement sync can still match.
+ */
 export function canBeTransferOut(txn: MatchableTransaction): boolean {
   if (txn.linkedTransactionId) return false;
+  if (txn.transferRole === "in") return false;
+  if (txn.direction === "debit") return true;
+  if (txn.direction === "credit") return false;
+  // Legacy fallback without direction
   if (txn.type === "expense") return true;
-  if (txn.type === "transfer" && txn.transferRole !== "in") return true;
+  if (isInternalTransferType(txn.type)) return true;
   return false;
 }
 
 export function canBeTransferIn(txn: MatchableTransaction): boolean {
   if (txn.linkedTransactionId) return false;
-  if (txn.type === "income") return true;
-  if (txn.type === "transfer" && txn.transferRole !== "out") return true;
+  if (txn.transferRole === "out") return false;
+  if (txn.direction === "credit") return true;
+  if (txn.direction === "debit") return false;
+  // Legacy fallback without direction
+  if (
+    txn.type === "unclassified_income" ||
+    txn.type === "income" ||
+    txn.type === "salary" ||
+    txn.type === "interest" ||
+    txn.type === "dividend" ||
+    txn.type === "gift" ||
+    txn.type === "cashback" ||
+    txn.type === "tax_refund" ||
+    txn.type === "capital_gain" ||
+    txn.type === "rental_income" ||
+    txn.type === "business_income"
+  ) {
+    return true;
+  }
+  if (isInternalTransferType(txn.type)) return true;
   return false;
 }
 

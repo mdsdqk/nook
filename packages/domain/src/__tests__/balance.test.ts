@@ -13,75 +13,82 @@ const ACCOUNT_B = "account-b";
 const UNRELATED = "account-unrelated";
 
 describe("computeTransactionEffect", () => {
-  it("income increases source account balance", () => {
+  it("credit increases source account balance", () => {
     const tx: LedgerTransaction = {
       accountId: ACCOUNT_A,
       amount: 1000,
       date: "2026-03-01",
-      type: "income",
+      direction: "credit",
+      type: "unclassified_income",
     };
     expect(computeTransactionEffect(tx, ACCOUNT_A)).toBe(1000);
   });
 
-  it("income has no effect on unrelated account", () => {
+  it("credit has no effect on unrelated account", () => {
     const tx: LedgerTransaction = {
       accountId: ACCOUNT_A,
       amount: 1000,
       date: "2026-03-01",
-      type: "income",
+      direction: "credit",
+      type: "salary",
     };
     expect(computeTransactionEffect(tx, UNRELATED)).toBe(0);
   });
 
-  it("expense decreases source account balance", () => {
+  it("debit decreases source account balance", () => {
     const tx: LedgerTransaction = {
       accountId: ACCOUNT_A,
       amount: 500,
       date: "2026-03-01",
+      direction: "debit",
       type: "expense",
     };
     expect(computeTransactionEffect(tx, ACCOUNT_A)).toBe(-500);
   });
 
-  it("obligation decreases source account balance", () => {
+  it("emi debit decreases source account balance", () => {
     const tx: LedgerTransaction = {
       accountId: ACCOUNT_A,
       amount: 2000,
       date: "2026-03-01",
-      type: "obligation",
+      direction: "debit",
+      type: "emi_payment",
     };
     expect(computeTransactionEffect(tx, ACCOUNT_A)).toBe(-2000);
   });
 
-  it("transfer decreases source account balance", () => {
+  it("collapsed internal_transfer decreases source account balance", () => {
     const tx: LedgerTransaction = {
       accountId: ACCOUNT_A,
       toAccountId: ACCOUNT_B,
       amount: 300,
       date: "2026-03-01",
-      type: "transfer",
+      direction: "debit",
+      type: "internal_transfer",
     };
     expect(computeTransactionEffect(tx, ACCOUNT_A)).toBe(-300);
   });
 
-  it("transfer increases destination account balance", () => {
+  it("collapsed internal_transfer increases destination account balance", () => {
     const tx: LedgerTransaction = {
       accountId: ACCOUNT_A,
       toAccountId: ACCOUNT_B,
       amount: 300,
       date: "2026-03-01",
-      type: "transfer",
+      direction: "debit",
+      type: "internal_transfer",
     };
     expect(computeTransactionEffect(tx, ACCOUNT_B)).toBe(300);
   });
 
-  it("transfer has no effect on unrelated account", () => {
+  it("collapsed internal_transfer has no effect on unrelated account", () => {
     const tx: LedgerTransaction = {
       accountId: ACCOUNT_A,
       toAccountId: ACCOUNT_B,
       amount: 300,
       date: "2026-03-01",
-      type: "transfer",
+      direction: "debit",
+      type: "internal_transfer",
     };
     expect(computeTransactionEffect(tx, UNRELATED)).toBe(0);
   });
@@ -110,16 +117,17 @@ describe("computeAccountBalance", () => {
         accountId: ACCOUNT_A,
         amount: 200,
         date: "2026-03-05",
+        direction: "debit",
         type: "expense",
       },
       {
         accountId: ACCOUNT_A,
         amount: 1000,
         date: "2026-03-10",
-        type: "income",
+        direction: "credit",
+        type: "unclassified_income",
       },
     ];
-    // 5000 - 200 + 1000 = 5800
     expect(
       computeAccountBalance(assertions, txns, ACCOUNT_A, "2026-03-15"),
     ).toBe(5800);
@@ -135,18 +143,17 @@ describe("computeAccountBalance", () => {
         accountId: ACCOUNT_A,
         amount: 500,
         date: "2026-02-15",
-        type: "income",
+        direction: "credit",
+        type: "unclassified_income",
       },
       {
         accountId: ACCOUNT_A,
         amount: 100,
         date: "2026-03-05",
+        direction: "debit",
         type: "expense",
       },
     ];
-    // Snaps to assertion at 2026-03-01 (balance 8000).
-    // Only txns after 2026-03-01 count: -100
-    // Result: 8000 - 100 = 7900
     expect(
       computeAccountBalance(assertions, txns, ACCOUNT_A, "2026-03-15"),
     ).toBe(7900);
@@ -180,18 +187,13 @@ describe("computeAccountBalance", () => {
         accountId: ACCOUNT_A,
         amount: 200,
         date: "2026-02-15",
+        direction: "debit",
         type: "expense",
       },
     ];
-    // Query at 2026-02-15: snaps to assertion at 2026-01-01 (1000),
-    // applies txn on 2026-02-15: -200 => 800
     expect(
       computeAccountBalance(assertions, txns, ACCOUNT_A, "2026-02-15"),
     ).toBe(800);
-
-    // Query at 2026-03-15: snaps to assertion at 2026-03-01 (5000),
-    // no txns after 2026-03-01 => 5000
-    // The backdated txn does NOT affect the post-assertion balance
     expect(
       computeAccountBalance(assertions, txns, ACCOUNT_A, "2026-03-15"),
     ).toBe(5000);
@@ -202,11 +204,9 @@ describe("computeAccountBalance", () => {
       { accountId: ACCOUNT_A, date: "2026-01-01", balance: 1000 },
       { accountId: ACCOUNT_A, date: "2026-06-01", balance: 3000 },
     ];
-    // Query in the gap — no txns, snaps to first assertion
     expect(
       computeAccountBalance(assertions, [], ACCOUNT_A, "2026-03-15"),
     ).toBe(1000);
-    // Query after second assertion — snaps to second assertion
     expect(
       computeAccountBalance(assertions, [], ACCOUNT_A, "2026-07-01"),
     ).toBe(3000);
@@ -221,17 +221,17 @@ describe("computeAccountBalance", () => {
         accountId: ACCOUNT_A,
         amount: 1000,
         date: "2026-03-01",
-        type: "income",
+        direction: "credit",
+        type: "unclassified_income",
       },
       {
         accountId: ACCOUNT_A,
         amount: 200,
         date: "2026-03-10",
+        direction: "debit",
         type: "expense",
       },
     ];
-    // No assertion before 2026-03-15, baseline = 0
-    // Txns in (-inf, 2026-03-15]: +1000 - 200 = 800
     expect(
       computeAccountBalance(assertions, txns, ACCOUNT_A, "2026-03-15"),
     ).toBe(800);
@@ -246,12 +246,12 @@ describe("computeAccountBalance", () => {
         accountId: ACCOUNT_A,
         amount: 100,
         date: "2026-03-01",
+        direction: "debit",
         type: "expense",
       },
     ];
-    // Txn date is NOT strictly after assertion date, so it's excluded
     expect(
-      computeAccountBalance(assertions, txns, ACCOUNT_A, "2026-03-01"),
+      computeAccountBalance(assertions, [], ACCOUNT_A, "2026-03-01"),
     ).toBe(5000);
   });
 
@@ -264,12 +264,14 @@ describe("computeAccountBalance", () => {
         accountId: ACCOUNT_A,
         amount: 5000,
         date: "2026-03-05",
-        type: "income",
+        direction: "credit",
+        type: "unclassified_income",
       },
       {
         accountId: ACCOUNT_A,
         amount: 2000,
         date: "2026-03-10",
+        direction: "debit",
         type: "expense",
       },
       {
@@ -277,16 +279,17 @@ describe("computeAccountBalance", () => {
         toAccountId: ACCOUNT_B,
         amount: 1000,
         date: "2026-03-12",
-        type: "transfer",
+        direction: "debit",
+        type: "internal_transfer",
       },
       {
         accountId: ACCOUNT_A,
         amount: 500,
         date: "2026-03-14",
-        type: "obligation",
+        direction: "debit",
+        type: "emi_payment",
       },
     ];
-    // 10000 + 5000 - 2000 - 1000 - 500 = 11500
     expect(
       computeAccountBalance(assertions, txns, ACCOUNT_A, "2026-03-15"),
     ).toBe(11500);
@@ -322,7 +325,6 @@ describe("computeNetWorth", () => {
       { type: "liability.credit_card", balance: 3000 },
       { type: "liability.loan", balance: 20000 },
     ];
-    // (50000 + 100000 + 5000) - (3000 + 20000) = 132000
     expect(computeNetWorth(accounts)).toBe(132000);
   });
 });

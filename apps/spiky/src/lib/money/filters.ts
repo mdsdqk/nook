@@ -1,4 +1,12 @@
-import type { MoneyAccount, MoneyTransaction, TransactionFilters } from "./types";
+import {
+  TRANSACTION_TYPE_REGISTRY,
+  type TransactionType,
+} from "@nook/domain";
+import type {
+  MoneyAccount,
+  MoneyTransaction,
+  TransactionFilters,
+} from "./types";
 
 function includesQuery(value: string | undefined, query: string): boolean {
   return (value ?? "").toLowerCase().includes(query);
@@ -12,8 +20,9 @@ export function filterTransactions(
   const query = filters.search.trim().toLowerCase();
 
   return transactions.filter((txn) => {
-    if (filters.type !== "all" && txn.type !== filters.type) {
-      return false;
+    if (filters.type !== "all") {
+      const group = TRANSACTION_TYPE_REGISTRY[txn.type as TransactionType]?.group;
+      if (group !== filters.type) return false;
     }
 
     if (filters.accountId && txn.accountId !== filters.accountId) {
@@ -27,6 +36,7 @@ export function filterTransactions(
     if (query) {
       const haystack = [
         txn.type,
+        txn.direction,
         txn.description,
         txn.narration,
         txn.merchant,

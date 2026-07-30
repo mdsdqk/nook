@@ -5,6 +5,7 @@ type TransferDocFields = Omit<
   Doc<"transactions">,
   "_id" | "_creationTime" | "linkedTransactionId" | "transferRole"
 > & {
+  direction: "credit" | "debit";
   type: string;
   category?: string;
 };
@@ -18,17 +19,32 @@ export function withoutTransferLink(txn: Doc<"transactions">): TransferDocFields
     transferRole: _role,
     ...rest
   } = txn;
-  return rest;
+  return {
+    ...rest,
+    direction:
+      rest.direction ??
+      (txn.transferRole === "in" ? ("credit" as const) : ("debit" as const)),
+  };
 }
 
 function restoredType(
   role: "out" | "in" | undefined,
-): "expense" | "income" {
-  return role === "in" ? "income" : "expense";
+): "expense" | "unclassified_income" {
+  return role === "in" ? "unclassified_income" : "expense";
 }
 
-function applyRestore(fields: TransferDocFields, role: "out" | "in" | undefined) {
+function restoredDirection(
+  role: "out" | "in" | undefined,
+): "credit" | "debit" {
+  return role === "in" ? "credit" : "debit";
+}
+
+function applyRestore(
+  fields: TransferDocFields,
+  role: "out" | "in" | undefined,
+) {
   fields.type = restoredType(role);
+  fields.direction = restoredDirection(role);
   if (fields.category === "Transfer") {
     delete fields.category;
   }
@@ -36,7 +52,8 @@ function applyRestore(fields: TransferDocFields, role: "out" | "in" | undefined)
 }
 
 /**
- * Clear mutual transfer link on both legs and restore them to expense/income.
+ * Clear mutual transfer link on both legs and restore them to
+ * expense/unclassified_income with matching direction.
  * No-op if `txn` is not linked.
  */
 export async function unlinkTransferPair(

@@ -87,18 +87,22 @@ This model eliminates backdated confusion forever.
 
 ### 4. Transaction Model (Updated for Canonical Model)
 
-#### 4.1 User-Facing Transaction Types  
-- Income  
-- Expense  
-- Transfer  
-- Obligations - CashflowOut (obligatory outflow experienced as one payment)  
+#### 4.1 Classification fields
 
-Users never see internal decomposition unless requested.
+Each ledger transaction carries three independent fields:
+
+- **`direction`** — objective money movement relative to the account: `credit` | `debit` (from the statement source).
+- **`type`** — finite financial meaning owned by the product (e.g. Salary, Expense, Internal Transfer, EMI Payment, Investment Purchase). See `@nook/domain` `TRANSACTION_TYPE_REGISTRY`.
+- **`category`** (optional) — free-form budgeting / reporting label (Food, Groceries, Travel, …). Not part of the financial type model; users may create and rename categories freely.
+
+Lifestyle spending is only `type === expense` (optionally with a category). Transfers, investments, debt payments, insurance premiums, and fees are not lifestyle spending.
+
+Unclassified statement credits default to `unclassified_income`; debits default to `expense`.
 
 #### 4.2 Composite Transactions (Internal Only)  
 Single user experience → multiple atomic effects (hidden by default).  
 Examples: EMI, ULIP premium, Employer PF contribution.  
-System accepts **one** user entry; decomposes internally where needed; respects assertions.
+System accepts **one** user entry; decomposes internally where needed; respects assertions. Richer domain entities (Salary, Trade, Loan, Policy) may aggregate transactions later and are out of scope for classification.
 
 ### 5. Spending (Consumption Truth) 
 

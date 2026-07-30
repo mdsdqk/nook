@@ -122,13 +122,16 @@ export async function syncStatementToLedger(
       .first();
 
     const amount = txn.credit ?? txn.debit ?? 0;
-    const type = txn.credit ? "income" : "expense";
+    const direction = txn.credit ? ("credit" as const) : ("debit" as const);
+    const defaultType = txn.credit ? "unclassified_income" : "expense";
 
     if (existing) {
+      // Preserve fine-grained type / category set by the user; only refresh
+      // objective fields from the statement.
       await ctx.db.patch(existing._id, {
         accountId,
         date: txn.date,
-        type,
+        direction,
         amount,
         description: txn.narration,
         narration: txn.narration,
@@ -141,7 +144,8 @@ export async function syncStatementToLedger(
         userId: args.userId,
         accountId,
         date: txn.date,
-        type,
+        direction,
+        type: defaultType,
         amount,
         description: txn.narration,
         narration: txn.narration,
