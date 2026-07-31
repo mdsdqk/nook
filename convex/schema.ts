@@ -182,4 +182,22 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_instrument", ["userId", "instrumentId"])
     .index("by_holding_key", ["userId", "instrumentId", "containerId"]),
+
+  // Idempotent wealth import envelope (analogous to parsedStatements).
+  wealthDocuments: defineTable({
+    userId: v.id("users"),
+    provider: v.literal("kuvera"),
+    statementType: v.literal("capital_gains"),
+    periodLabel: v.string(),
+    periodStart: v.string(),
+    periodEnd: v.string(),
+    contentHash: v.string(),
+    sourcePath: v.optional(v.string()),
+    status: v.string(),
+    schemeCount: v.number(),
+    lotCount: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_content_hash", ["userId", "contentHash"])
+    .index("by_dedupe", ["userId", "provider", "statementType", "contentHash"]),
 });

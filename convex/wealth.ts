@@ -505,3 +505,240 @@ export const getPortfolio = query({
     );
   },
 });
+
+const kuveraLotLeg = v.object({
+  date: v.string(),
+  value: v.number(),
+  nav: v.number(),
+});
+
+const kuveraLot = v.object({
+  lotIndex: v.number(),
+  quantity: v.number(),
+  purchase: kuveraLotLeg,
+  redemption: kuveraLotLeg,
+  acquisitionValue: v.optional(v.number()),
+  purchaseExternalKey: v.string(),
+  redemptionExternalKey: v.string(),
+});
+
+const kuveraScheme = v.object({
+  schemeName: v.string(),
+  isin: v.string(),
+  folio: v.string(),
+  category: v.string(),
+  plan: v.union(v.literal("direct"), v.literal("regular")),
+  option: v.union(v.literal("growth"), v.literal("idcw")),
+  instrumentExternalKey: v.string(),
+  fundHouse: v.string(),
+  lots: v.array(kuveraLot),
+});
+
+/**
+ * Upsert a Kuvera FY capital-gains import into Wealth domain objects.
+ * Creates closed-lot purchase+redemption pairs; open holdings often end at zero.
+ */
+export const upsertKuveraCapitalGains = mutation({
+  args: {
+    userId: v.id("users"),
+    contentHash: v.string(),
+    sourcePath: v.optional(v.string()),
+    periodLabel: v.string(),
+    periodStart: v.string(),
+    periodEnd: v.string(),
+    schemes: v.array(kuveraScheme),
+  },
+  returns: v.object({
+    documentId: v.id("wealthDocuments"),
+    action: v.union(v.literal("created"), v.literal("unchanged")),
+    instrumentsUpserted: v.number(),
+    transactionsUpserted: v.number(),
+    transactionsSkipped: v.number(),
+    holdingsRecomputed: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const existingDoc = await ctx.db
+      .query("wealthDocuments")
+      .withIndex("by_dedupe", (q) =>
+        q
+          .eq("userId", args.userId)
+          .eq("provider", "kuvera")
+          .eq("statementType", "capital_gains")
+          .eq("contentHash", args.contentHash),
+      )
+      .first();
+
+    if (existingDoc) {
+      return {
+        documentId: existingDoc._id,
+        action: "unchanged" as const,
+        instrumentsUpserted: 0,
+        transactionsUpserted: 0,
+        transactionsSkipped: 0,
+        holdingsRecomputed: 0,
+      };
+    }
+
+    const lotCount = args.schemes.reduce((n, s) => n + s.lots.length, 0);
+
+    const documentRow: {
+      userId: Id<"users">;
+      provider: "kuvera";
+      statementType: "capital_gains";
+      periodLabel: string;
+      periodStart: string;
+      periodEnd: string;
+      contentHash: string;
+      sourcePath?: string;
+      status: string;
+      schemeCount: number;
+      lotCount: number;
+    } = {
+      userId: args.userId,
+      provider: "kuvera",
+      statementType: "capital_gains",
+      periodLabel: args.periodLabel,
+      periodStart: args.periodStart,
+      periodEnd: args.periodEnd,
+      contentHash: args.contentHash,
+      status: "imported",
+      schemeCount: args.schemes.length,
+      lotCount,
+    };
+    if (args.sourcePath !== undefined) documentRow.sourcePath = args.sourcePath;
+
+    const documentId = await ctx.db.insert("wealthDocuments", documentRow);
+
+    const evidenceId = await ctx.db.insert("wealthEvidence", {
+      userId: args.userId,
+      sourceType: "broker_statement",
+      documentId,
+      note: `Kuvera capital gains ${args.periodLabel}`,
+      createdAt: Date.now(),
+    });
+
+    let instrumentsUpserted = 0;
+    let transactionsUpserted = 0;
+    let transactionsSkipped = 0;
+    const holdingKeys = new Set<string>();
+
+    for (const scheme of args.schemes) {
+      let instrument = await ctx.db
+        .query("instruments")
+        .withIndex("by_external_key", (q) =>
+          q
+            .eq("userId", args.userId)
+            .eq("externalKey", scheme.instrumentExternalKey),
+        )
+        .first();
+
+      if (!instrument) {
+        const instrumentId = await ctx.db.insert("instruments", {
+          userId: args.userId,
+          assetClass: "mutual_fund",
+          name: scheme.schemeName,
+          currency: "INR",
+          provider: scheme.fundHouse,
+          fundHouse: scheme.fundHouse,
+          schemeName: scheme.schemeName,
+          isin: scheme.isin,
+          plan: scheme.plan,
+          option: scheme.option,
+          category: scheme.category,
+          externalKey: scheme.instrumentExternalKey,
+        });
+        instrument = (await ctx.db.get(instrumentId))!;
+        instrumentsUpserted += 1;
+      }
+
+      for (const lot of scheme.lots) {
+        const legs: Array<{
+          type: "purchase" | "redemption";
+          date: string;
+          price: number;
+          amount: number;
+          externalKey: string;
+        }> = [
+          {
+            type: "purchase",
+            date: lot.purchase.date,
+            price: lot.purchase.nav,
+            amount: lot.purchase.value,
+            externalKey: lot.purchaseExternalKey,
+          },
+          {
+            type: "redemption",
+            date: lot.redemption.date,
+            price: lot.redemption.nav,
+            amount: lot.redemption.value,
+            externalKey: lot.redemptionExternalKey,
+          },
+        ];
+
+        for (const leg of legs) {
+          const dup = await ctx.db
+            .query("assetTransactions")
+            .withIndex("by_owner_instrument_external_key", (q) =>
+              q
+                .eq("userId", args.userId)
+                .eq("instrumentId", instrument!._id)
+                .eq("externalKey", leg.externalKey),
+            )
+            .first();
+
+          if (dup) {
+            assertIdempotentReplay(dup, {
+              containerId: scheme.folio,
+              type: leg.type,
+              date: leg.date,
+              quantity: lot.quantity,
+              price: leg.price,
+              amount: leg.amount,
+            });
+            transactionsSkipped += 1;
+            continue;
+          }
+
+          await ctx.db.insert("assetTransactions", {
+            userId: args.userId,
+            instrumentId: instrument._id,
+            containerId: scheme.folio,
+            type: leg.type,
+            date: leg.date,
+            quantity: lot.quantity,
+            price: leg.price,
+            amount: leg.amount,
+            evidenceId,
+            sourceType: "broker_statement",
+            externalKey: leg.externalKey,
+          });
+          transactionsUpserted += 1;
+        }
+
+        holdingKeys.add(`${instrument._id}\0${scheme.folio}`);
+      }
+    }
+
+    let holdingsRecomputed = 0;
+    for (const key of holdingKeys) {
+      const [instrumentId, containerId] = key.split("\0") as [
+        Id<"instruments">,
+        string,
+      ];
+      await recomputeHolding(ctx, args.userId, instrumentId, containerId);
+      holdingsRecomputed += 1;
+    }
+
+    return {
+      documentId,
+      action: "created" as const,
+      instrumentsUpserted,
+      transactionsUpserted,
+      transactionsSkipped,
+      holdingsRecomputed,
+    };
+  },
+});

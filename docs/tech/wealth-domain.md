@@ -106,6 +106,26 @@ Queries: `listInstruments`, `listHoldings`, `getPortfolio`.
 
 Domain logic lives in `@nook/domain`; Convex wrappers stay thin.
 
+## Broker statement ingest (Kuvera capital gains)
+
+Kuvera FY **Capital Gains** XLSX is investment evidence (`sourceType: broker_statement`), not Money/bank evidence.
+
+Pipeline:
+
+```text
+xlsx → XlsxWorkbookReader → KuveraCgDetector → KuveraCgParser
+    → ParsedWealthCapitalGains
+    → CLI (--out JSON | --convex upsertKuveraCapitalGains)
+```
+
+CLI: `bun run wealth parse <xlsx> [--out dir] [--convex --user <name>]`
+
+Each CG row is a **closed FIFO lot** (purchase + redemption). Importing CG alone typically yields **zero open quantity** after holding recompute. Open holdings require a separate holdings/CAS statement (out of scope).
+
+Import envelope: `wealthDocuments` (contentHash dedupe) + `wealthEvidence` + Instruments + AssetTransactions.
+
+Fixtures under `packages/parsers/src/__tests__/fixtures/kuvera/` are **anonymized** — never commit real `sample_data/` statements.
+
 ## Design rules
 
 1. Evidence → Domain → Views; raw CAS/bank payloads do not leak into domain math.
@@ -133,6 +153,7 @@ Domain logic lives in `@nook/domain`; Convex wrappers stay thin.
 | Area | Path |
 |------|------|
 | Domain | `packages/domain/src/{instrument,asset-transaction,holding,portfolio,wealth-source}.ts` |
-| Schema | `convex/schema.ts` (`instruments`, `wealthEvidence`, `assetTransactions`, `holdings`) |
+| Schema | `convex/schema.ts` (`instruments`, `wealthEvidence`, `assetTransactions`, `holdings`, `wealthDocuments`) |
 | API | `convex/wealth.ts` |
 | Holding recompute | `convex/lib/holdings.ts` |
+| Kuvera CG ingest | `packages/readers` (xlsx), `packages/parsers/src/kuvera/*`, `packages/pipeline/parse-wealth-file.ts`, `bun run wealth parse` |

@@ -16,5 +16,23 @@ export type {
   Validator,
   ResultWriter,
 } from "./ports";
+export type { WorkbookDocument, WorkbookSheet, WorkbookCell } from "./workbook";
+export type {
+  WealthProvider,
+  WealthStatementType,
+  WealthAssetCategory,
+  WealthPeriod,
+  WealthLotLeg,
+  ParsedWealthCapitalGainsLot,
+  ParsedWealthScheme,
+  ParsedWealthCapitalGains,
+} from "./wealth-statement";
+export type {
+  WorkbookReader,
+  WealthDetectionResult,
+  WealthDetector,
+  WealthStatementParser,
+  WealthParseResult,
+} from "./wealth-ports";
 export { ErrorCode } from "./errors";
 export type { ParseError } from "./errors";

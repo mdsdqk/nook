@@ -1,4 +1,5 @@
 export { getParser } from "./registry";
+export { getWealthParser } from "./wealth-registry";
 export { HdfcSavingsParser } from "./hdfc/savings";
 export { IndusindIndieSavingsParser } from "./indusind/indie-savings";
 export { DbsDigisavingsParser } from "./dbs/digisavings";
@@ -10,3 +11,5 @@ export { HsbcSavingsAnnualParser } from "./hsbc/savings-annual";
 export { IdfcSavingsParser } from "./idfc/savings";
 export { SbiSavingsParser } from "./sbi/savings";
 export { Kotak811SavingsParser } from "./kotak/811-savings";
+export { KuveraCapitalGainsParser } from "./kuvera/capital-gains";
+export { KuveraCapitalGainsDetector } from "./kuvera/detect";

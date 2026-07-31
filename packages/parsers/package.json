@@ -17,6 +17,7 @@
     "@nook/shared": "workspace:*"
   },
   "devDependencies": {
+    "@nook/readers": "workspace:*",
     "typescript": "^5.7.2",
     "vitest": "^4.1.2"
   }

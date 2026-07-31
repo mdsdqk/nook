@@ -5,7 +5,8 @@
   "type": "module",
   "main": "./src/index.ts",
   "bin": {
-    "statement": "./src/index.ts"
+    "statement": "./src/index.ts",
+    "wealth": "./src/wealth.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",
