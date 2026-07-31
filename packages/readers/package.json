@@ -13,11 +13,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@libpdf/core": "^0.4.1",
     "@nook/contracts": "workspace:*",
-    "@libpdf/core": "^0.4.1"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "@types/xlsx": "^0.0.36",
     "typescript": "^5.7.2",
     "vitest": "^4.1.2"
   }

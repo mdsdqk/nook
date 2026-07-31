@@ -12,6 +12,7 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "statement": "bun run apps/cli/src/index.ts",
+    "wealth": "bun run apps/cli/src/wealth.ts",
     "test": "turbo run test"
   },
   "devDependencies": {

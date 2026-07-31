@@ -1,3 +1,14 @@
 export { JsonWriter } from "./json-writer";
 export { ConvexStatementWriter } from "./convex-writer";
 export { buildExternalKey } from "./external-key";
+export {
+  toKuveraConvexPayload,
+  buildKuveraLotExternalKey,
+  buildKuveraInstrumentExternalKey,
+} from "./wealth-writer";
+export type {
+  KuveraConvexWritePayload,
+  KuveraConvexSchemePayload,
+  KuveraConvexLotPayload,
+} from "./wealth-writer";
+export { WealthJsonWriter } from "./wealth-json-writer";

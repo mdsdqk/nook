@@ -92,4 +92,112 @@ export default defineSchema({
   })
     .index("by_statement", ["statementId"])
     .index("by_external_key", ["externalKey"]),
+
+  // --- Wealth domain ---
+  // Instruments are TEMPORARILY user-scoped for manual entry convenience.
+  // Long-term: shared Instrument Catalog; users own Holdings, not Instruments.
+  instruments: defineTable({
+    userId: v.id("users"),
+    assetClass: v.literal("mutual_fund"),
+    name: v.string(),
+    currency: v.string(),
+    provider: v.optional(v.string()),
+    fundHouse: v.string(),
+    schemeName: v.string(),
+    schemeCode: v.optional(v.string()),
+    isin: v.optional(v.string()),
+    plan: v.union(v.literal("direct"), v.literal("regular")),
+    option: v.union(v.literal("growth"), v.literal("idcw")),
+    category: v.optional(v.string()),
+    externalKey: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_class", ["userId", "assetClass"])
+    .index("by_external_key", ["userId", "externalKey"]),
+
+  // Thin provenance only — no payload blob. Evidence never updates Holdings.
+  wealthEvidence: defineTable({
+    userId: v.id("users"),
+    sourceType: v.union(
+      v.literal("manual"),
+      v.literal("cas"),
+      v.literal("broker_statement"),
+      v.literal("broker_api"),
+    ),
+    documentId: v.optional(v.string()),
+    referenceId: v.optional(v.string()),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_source", ["userId", "sourceType"]),
+
+  assetTransactions: defineTable({
+    userId: v.id("users"),
+    instrumentId: v.id("instruments"),
+    containerId: v.string(),
+    type: v.string(),
+    executionType: v.optional(v.string()),
+    date: v.string(),
+    quantity: v.optional(v.number()),
+    price: v.optional(v.number()),
+    amount: v.optional(v.number()),
+    evidenceId: v.id("wealthEvidence"),
+    sourceType: v.union(
+      v.literal("manual"),
+      v.literal("cas"),
+      v.literal("broker_statement"),
+      v.literal("broker_api"),
+    ),
+    bankTransactionId: v.optional(v.id("transactions")),
+    externalKey: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_instrument", ["instrumentId"])
+    .index("by_holding_key", ["userId", "instrumentId", "containerId"])
+    .index("by_evidence", ["evidenceId"])
+    .index("by_owner_instrument_external_key", [
+      "userId",
+      "instrumentId",
+      "externalKey",
+    ]),
+
+  // Materialized derived state. Never patch from clients — recompute only.
+  // lastPrice/currentValue are provisional (last known price; price discovery OOS).
+  holdings: defineTable({
+    userId: v.id("users"),
+    instrumentId: v.id("instruments"),
+    containerId: v.string(),
+    quantity: v.number(),
+    investedAmount: v.number(),
+    currentValue: v.number(),
+    costBasis: v.number(),
+    unrealizedGain: v.number(),
+    unrealizedGainPercent: v.number(),
+    lastUpdated: v.string(),
+    lastPrice: v.optional(v.number()),
+    costBasisStrategy: v.literal("average"),
+    realizedGain: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_instrument", ["userId", "instrumentId"])
+    .index("by_holding_key", ["userId", "instrumentId", "containerId"]),
+
+  // Idempotent wealth import envelope (analogous to parsedStatements).
+  wealthDocuments: defineTable({
+    userId: v.id("users"),
+    provider: v.literal("kuvera"),
+    statementType: v.literal("capital_gains"),
+    periodLabel: v.string(),
+    periodStart: v.string(),
+    periodEnd: v.string(),
+    contentHash: v.string(),
+    sourcePath: v.optional(v.string()),
+    status: v.string(),
+    schemeCount: v.number(),
+    lotCount: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_content_hash", ["userId", "contentHash"])
+    .index("by_dedupe", ["userId", "provider", "statementType", "contentHash"]),
 });
