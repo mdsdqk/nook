@@ -11,4 +11,5 @@ export type {
   KuveraConvexSchemePayload,
   KuveraConvexLotPayload,
 } from "./wealth-writer";
+export type { ConvexWritePayload } from "./convex-writer";
 export { WealthJsonWriter } from "./wealth-json-writer";

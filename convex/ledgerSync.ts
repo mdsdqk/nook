@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx } from "./_generated/server";
+import { getAppUser } from "./lib/auth";
 import { shiftIsoDate } from "./lib/dates";
 
 type SyncStatementArgs = {
@@ -167,7 +168,6 @@ export async function syncStatementToLedger(
 
 export const syncFromStatement = mutation({
   args: {
-    userId: v.id("users"),
     statementId: v.id("parsedStatements"),
     bank: v.string(),
     accountFingerprint: v.string(),
@@ -194,7 +194,15 @@ export const syncFromStatement = mutation({
     transactionsSkipped: v.number(),
   }),
   handler: async (ctx, args) => {
-    return await syncStatementToLedger(ctx, args);
+    const user = await getAppUser(ctx);
+    const statement = await ctx.db.get(args.statementId);
+    if (!statement || statement.userId !== user._id) {
+      throw new Error("Statement not found");
+    }
+    return await syncStatementToLedger(ctx, {
+      ...args,
+      userId: user._id,
+    });
   },
 });
 
@@ -208,14 +216,13 @@ const unsyncedStatementValidator = v.object({
 });
 
 export const listUnsynced = query({
-  args: {
-    userId: v.id("users"),
-  },
+  args: {},
   returns: v.array(unsyncedStatementValidator),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const user = await getAppUser(ctx);
     const statements = await ctx.db
       .query("parsedStatements")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const unsynced = [];
@@ -240,18 +247,17 @@ export const listUnsynced = query({
 });
 
 export const syncPendingForUser = mutation({
-  args: {
-    userId: v.id("users"),
-  },
+  args: {},
   returns: v.object({
     statementsSynced: v.number(),
     accountsTouched: v.number(),
     transactionsUpserted: v.number(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const user = await getAppUser(ctx);
     const statements = await ctx.db
       .query("parsedStatements")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     let statementsSynced = 0;
@@ -273,7 +279,7 @@ export const syncPendingForUser = mutation({
       parsedTxns.sort((a, b) => a.sequence - b.sequence);
 
       const result = await syncStatementToLedger(ctx, {
-        userId: args.userId,
+        userId: user._id,
         statementId: statement._id,
         bank: statement.bank,
         accountFingerprint: statement.accountFingerprint,

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAppUser } from "./lib/auth";
 import { upsertManualAssertion } from "./lib/balances";
 import { requireUserAccount } from "./lib/ownership";
 
@@ -14,12 +15,12 @@ const assertionValidator = v.object({
 
 export const list = query({
   args: {
-    userId: v.id("users"),
     accountId: v.id("accounts"),
   },
   returns: v.array(assertionValidator),
   handler: async (ctx, args) => {
-    await requireUserAccount(ctx, args.userId, args.accountId);
+    const user = await getAppUser(ctx);
+    await requireUserAccount(ctx, user._id, args.accountId);
     const rows = await ctx.db
       .query("balanceAssertions")
       .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
@@ -30,20 +31,15 @@ export const list = query({
 
 export const assert = mutation({
   args: {
-    userId: v.id("users"),
     accountId: v.id("accounts"),
     date: v.string(),
     balance: v.number(),
   },
   returns: v.id("balanceAssertions"),
   handler: async (ctx, args) => {
-    await requireUserAccount(ctx, args.userId, args.accountId);
-    await upsertManualAssertion(
-      ctx,
-      args.accountId,
-      args.date,
-      args.balance,
-    );
+    const user = await getAppUser(ctx);
+    await requireUserAccount(ctx, user._id, args.accountId);
+    await upsertManualAssertion(ctx, args.accountId, args.date, args.balance);
 
     const row = await ctx.db
       .query("balanceAssertions")

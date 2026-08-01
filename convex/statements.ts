@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAppUser } from "./lib/auth";
 
 export const upsertStatement = mutation({
   args: {
-    userId: v.id("users"),
     bank: v.string(),
     accountFingerprint: v.string(),
     accountNumberMasked: v.string(),
@@ -33,14 +33,16 @@ export const upsertStatement = mutation({
     action: v.string(),
   }),
   handler: async (ctx, args) => {
-    const { transactions, ...statementData } = args;
+    const user = await getAppUser(ctx);
+    const { transactions, ...rest } = args;
+    const statementData = { ...rest, userId: user._id };
 
     // Check for existing statement with same dedupe key
     const existing = await ctx.db
       .query("parsedStatements")
       .withIndex("by_dedupe", (q) =>
         q
-          .eq("userId", args.userId)
+          .eq("userId", user._id)
           .eq("bank", args.bank)
           .eq("accountFingerprint", args.accountFingerprint)
           .eq("periodStart", args.periodStart)
@@ -104,9 +106,7 @@ export const upsertStatement = mutation({
 });
 
 export const listStatements = query({
-  args: {
-    userId: v.id("users"),
-  },
+  args: {},
   returns: v.array(
     v.object({
       _id: v.id("parsedStatements"),
@@ -126,10 +126,11 @@ export const listStatements = query({
       status: v.string(),
     }),
   ),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const user = await getAppUser(ctx);
     return await ctx.db
       .query("parsedStatements")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
   },
 });

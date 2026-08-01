@@ -14,6 +14,7 @@ import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { computeBalancesForUser } from "./lib/balances";
+import { getAppUser } from "./lib/auth";
 import { recomputeHolding } from "./lib/holdings";
 
 const EXECUTION_TYPES = new Set(["sip", "stp", "swp", "lumpsum"]);
@@ -158,7 +159,6 @@ function assertIdempotentReplay(
  */
 export const createManualInstrument = mutation({
   args: {
-    userId: v.id("users"),
     name: v.string(),
     currency: v.string(),
     fundHouse: v.string(),
@@ -174,14 +174,13 @@ export const createManualInstrument = mutation({
   },
   returns: v.id("instruments"),
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
+    const user = await getAppUser(ctx);
 
     if (args.externalKey !== undefined) {
       const existing = await ctx.db
         .query("instruments")
         .withIndex("by_external_key", (q) =>
-          q.eq("userId", args.userId).eq("externalKey", args.externalKey!),
+          q.eq("userId", user._id).eq("externalKey", args.externalKey!),
         )
         .first();
       if (existing) return existing._id;
@@ -189,7 +188,7 @@ export const createManualInstrument = mutation({
 
     // Provenance for catalog entry; does not create Holdings.
     await ctx.db.insert("wealthEvidence", {
-      userId: args.userId,
+      userId: user._id,
       sourceType: "manual",
       note: args.note ?? `Manual instrument: ${args.name}`,
       createdAt: Date.now(),
@@ -210,7 +209,7 @@ export const createManualInstrument = mutation({
       category?: string;
       externalKey?: string;
     } = {
-      userId: args.userId,
+      userId: user._id,
       assetClass: "mutual_fund",
       name: args.name,
       currency: args.currency,
@@ -236,7 +235,6 @@ export const createManualInstrument = mutation({
  */
 export const recordManualAssetTransaction = mutation({
   args: {
-    userId: v.id("users"),
     instrumentId: v.id("instruments"),
     containerId: v.string(),
     type: v.string(),
@@ -256,7 +254,8 @@ export const recordManualAssetTransaction = mutation({
     holdingId: v.union(v.id("holdings"), v.null()),
   }),
   handler: async (ctx, args) => {
-    await requireUserInstrument(ctx, args.userId, args.instrumentId);
+    const user = await getAppUser(ctx);
+    await requireUserInstrument(ctx, user._id, args.instrumentId);
 
     if (!isAssetTransactionType(args.type)) {
       throw new Error(
@@ -278,7 +277,7 @@ export const recordManualAssetTransaction = mutation({
     }
     if (args.bankTransactionId !== undefined) {
       const bankTxn = await ctx.db.get(args.bankTransactionId);
-      if (!bankTxn || bankTxn.userId !== args.userId) {
+      if (!bankTxn || bankTxn.userId !== user._id) {
         throw new Error("Bank transaction not found");
       }
     }
@@ -288,7 +287,7 @@ export const recordManualAssetTransaction = mutation({
         .query("assetTransactions")
         .withIndex("by_owner_instrument_external_key", (q) =>
           q
-            .eq("userId", args.userId)
+            .eq("userId", user._id)
             .eq("instrumentId", args.instrumentId)
             .eq("externalKey", args.externalKey!),
         )
@@ -299,7 +298,7 @@ export const recordManualAssetTransaction = mutation({
           .query("holdings")
           .withIndex("by_holding_key", (q) =>
             q
-              .eq("userId", args.userId)
+              .eq("userId", user._id)
               .eq("instrumentId", args.instrumentId)
               .eq("containerId", dup.containerId),
           )
@@ -319,7 +318,7 @@ export const recordManualAssetTransaction = mutation({
       note?: string;
       createdAt: number;
     } = {
-      userId: args.userId,
+      userId: user._id,
       sourceType: "manual",
       createdAt: Date.now(),
     };
@@ -343,7 +342,7 @@ export const recordManualAssetTransaction = mutation({
       bankTransactionId?: Id<"transactions">;
       externalKey?: string;
     } = {
-      userId: args.userId,
+      userId: user._id,
       instrumentId: args.instrumentId,
       containerId: args.containerId,
       type: args.type,
@@ -366,7 +365,7 @@ export const recordManualAssetTransaction = mutation({
 
     const holdingId = await recomputeHolding(
       ctx,
-      args.userId,
+      user._id,
       args.instrumentId,
       args.containerId,
     );
@@ -378,20 +377,20 @@ export const recordManualAssetTransaction = mutation({
 /** Optional link only — does not change holding math. */
 export const linkBankTransaction = mutation({
   args: {
-    userId: v.id("users"),
     assetTransactionId: v.id("assetTransactions"),
     bankTransactionId: v.union(v.id("transactions"), v.null()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const assetTxn = await ctx.db.get(args.assetTransactionId);
-    if (!assetTxn || assetTxn.userId !== args.userId) {
+    if (!assetTxn || assetTxn.userId !== user._id) {
       throw new Error("Asset transaction not found");
     }
 
     if (args.bankTransactionId !== null) {
       const bankTxn = await ctx.db.get(args.bankTransactionId);
-      if (!bankTxn || bankTxn.userId !== args.userId) {
+      if (!bankTxn || bankTxn.userId !== user._id) {
         throw new Error("Bank transaction not found");
       }
       await ctx.db.patch(args.assetTransactionId, {
@@ -408,23 +407,25 @@ export const linkBankTransaction = mutation({
 });
 
 export const listInstruments = query({
-  args: { userId: v.id("users") },
+  args: {},
   returns: v.array(instrumentValidator),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const user = await getAppUser(ctx);
     return await ctx.db
       .query("instruments")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
   },
 });
 
 export const listHoldings = query({
-  args: { userId: v.id("users") },
+  args: {},
   returns: v.array(holdingValidator),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const user = await getAppUser(ctx);
     return await ctx.db
       .query("holdings")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
   },
 });
@@ -435,29 +436,29 @@ export const listHoldings = query({
  */
 export const getPortfolio = query({
   args: {
-    userId: v.id("users"),
     asOfDate: v.string(),
   },
   returns: portfolioValidator,
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const holdings = await ctx.db
       .query("holdings")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const instrumentDocs = await ctx.db
       .query("instruments")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const accounts = await ctx.db
       .query("accounts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const balances = await computeBalancesForUser(
       ctx,
-      args.userId,
+      user._id,
       args.asOfDate,
     );
 
@@ -540,7 +541,6 @@ const kuveraScheme = v.object({
  */
 export const upsertKuveraCapitalGains = mutation({
   args: {
-    userId: v.id("users"),
     contentHash: v.string(),
     sourcePath: v.optional(v.string()),
     periodLabel: v.string(),
@@ -557,14 +557,13 @@ export const upsertKuveraCapitalGains = mutation({
     holdingsRecomputed: v.number(),
   }),
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
+    const user = await getAppUser(ctx);
 
     const existingDoc = await ctx.db
       .query("wealthDocuments")
       .withIndex("by_dedupe", (q) =>
         q
-          .eq("userId", args.userId)
+          .eq("userId", user._id)
           .eq("provider", "kuvera")
           .eq("statementType", "capital_gains")
           .eq("contentHash", args.contentHash),
@@ -597,7 +596,7 @@ export const upsertKuveraCapitalGains = mutation({
       schemeCount: number;
       lotCount: number;
     } = {
-      userId: args.userId,
+      userId: user._id,
       provider: "kuvera",
       statementType: "capital_gains",
       periodLabel: args.periodLabel,
@@ -613,7 +612,7 @@ export const upsertKuveraCapitalGains = mutation({
     const documentId = await ctx.db.insert("wealthDocuments", documentRow);
 
     const evidenceId = await ctx.db.insert("wealthEvidence", {
-      userId: args.userId,
+      userId: user._id,
       sourceType: "broker_statement",
       documentId,
       note: `Kuvera capital gains ${args.periodLabel}`,
@@ -630,14 +629,14 @@ export const upsertKuveraCapitalGains = mutation({
         .query("instruments")
         .withIndex("by_external_key", (q) =>
           q
-            .eq("userId", args.userId)
+            .eq("userId", user._id)
             .eq("externalKey", scheme.instrumentExternalKey),
         )
         .first();
 
       if (!instrument) {
         const instrumentId = await ctx.db.insert("instruments", {
-          userId: args.userId,
+          userId: user._id,
           assetClass: "mutual_fund",
           name: scheme.schemeName,
           currency: "INR",
@@ -683,7 +682,7 @@ export const upsertKuveraCapitalGains = mutation({
             .query("assetTransactions")
             .withIndex("by_owner_instrument_external_key", (q) =>
               q
-                .eq("userId", args.userId)
+                .eq("userId", user._id)
                 .eq("instrumentId", instrument!._id)
                 .eq("externalKey", leg.externalKey),
             )
@@ -703,7 +702,7 @@ export const upsertKuveraCapitalGains = mutation({
           }
 
           await ctx.db.insert("assetTransactions", {
-            userId: args.userId,
+            userId: user._id,
             instrumentId: instrument._id,
             containerId: scheme.folio,
             type: leg.type,
@@ -728,7 +727,7 @@ export const upsertKuveraCapitalGains = mutation({
         Id<"instruments">,
         string,
       ];
-      await recomputeHolding(ctx, args.userId, instrumentId, containerId);
+      await recomputeHolding(ctx, user._id, instrumentId, containerId);
       holdingsRecomputed += 1;
     }
 

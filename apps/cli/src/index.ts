@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { parseCommand } from "./commands/parse";
 import { detectCommand } from "./commands/detect";
 import { validateCommand } from "./commands/validate";
+import { authCommand } from "./commands/auth";
 
 const program = new Command();
 
@@ -14,5 +15,6 @@ program
 program.addCommand(parseCommand);
 program.addCommand(detectCommand);
 program.addCommand(validateCommand);
+program.addCommand(authCommand);
 
 program.parse();

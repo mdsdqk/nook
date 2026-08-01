@@ -1,6 +1,7 @@
 import { TRANSACTION_TYPES, isTransactionType } from "@nook/domain";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAppUser } from "./lib/auth";
 import { requireUserAccount } from "./lib/ownership";
 import {
   deleteTransferLeg,
@@ -61,16 +62,16 @@ function breaksTransferLink(
 
 export const list = query({
   args: {
-    userId: v.id("users"),
     accountId: v.optional(v.id("accounts")),
     type: v.optional(v.string()),
     direction: v.optional(v.union(v.literal("credit"), v.literal("debit"))),
   },
   returns: v.array(transactionValidator),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     let rows;
     if (args.accountId) {
-      await requireUserAccount(ctx, args.userId, args.accountId);
+      await requireUserAccount(ctx, user._id, args.accountId);
       rows = await ctx.db
         .query("transactions")
         .withIndex("by_account", (q) => q.eq("accountId", args.accountId!))
@@ -78,7 +79,7 @@ export const list = query({
     } else {
       rows = await ctx.db
         .query("transactions")
-        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
         .collect();
     }
 
@@ -100,13 +101,13 @@ export const list = query({
 
 export const get = query({
   args: {
-    userId: v.id("users"),
     transactionId: v.id("transactions"),
   },
   returns: v.union(transactionValidator, v.null()),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const txn = await ctx.db.get(args.transactionId);
-    if (!txn || txn.userId !== args.userId) {
+    if (!txn || txn.userId !== user._id) {
       return null;
     }
     return txn;
@@ -115,7 +116,6 @@ export const get = query({
 
 export const create = mutation({
   args: {
-    userId: v.id("users"),
     accountId: v.id("accounts"),
     date: v.string(),
     direction: v.union(v.literal("credit"), v.literal("debit")),
@@ -129,7 +129,8 @@ export const create = mutation({
   },
   returns: v.id("transactions"),
   handler: async (ctx, args) => {
-    await requireUserAccount(ctx, args.userId, args.accountId);
+    const user = await getAppUser(ctx);
+    await requireUserAccount(ctx, user._id, args.accountId);
 
     if (!ALLOWED_DIRECTIONS.has(args.direction)) {
       throw new Error("Invalid transaction direction");
@@ -142,7 +143,7 @@ export const create = mutation({
     }
 
     return await ctx.db.insert("transactions", {
-      userId: args.userId,
+      userId: user._id,
       accountId: args.accountId,
       date: args.date,
       direction: args.direction,
@@ -162,7 +163,6 @@ export const create = mutation({
 
 export const update = mutation({
   args: {
-    userId: v.id("users"),
     transactionId: v.id("transactions"),
     accountId: v.optional(v.id("accounts")),
     date: v.optional(v.string()),
@@ -177,13 +177,14 @@ export const update = mutation({
   },
   returns: v.id("transactions"),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const txn = await ctx.db.get(args.transactionId);
-    if (!txn || txn.userId !== args.userId) {
+    if (!txn || txn.userId !== user._id) {
       throw new Error("Transaction not found");
     }
 
     if (args.accountId !== undefined) {
-      await requireUserAccount(ctx, args.userId, args.accountId);
+      await requireUserAccount(ctx, user._id, args.accountId);
     }
     if (
       args.direction !== undefined &&
@@ -208,7 +209,7 @@ export const update = mutation({
 
     // Re-read after possible unlink/replace.
     const current = await ctx.db.get(args.transactionId);
-    if (!current || current.userId !== args.userId) {
+    if (!current || current.userId !== user._id) {
       throw new Error("Transaction not found");
     }
 
@@ -249,13 +250,13 @@ export const update = mutation({
 
 export const remove = mutation({
   args: {
-    userId: v.id("users"),
     transactionId: v.id("transactions"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const txn = await ctx.db.get(args.transactionId);
-    if (!txn || txn.userId !== args.userId) {
+    if (!txn || txn.userId !== user._id) {
       throw new Error("Transaction not found");
     }
     await deleteTransferLeg(ctx, txn);

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { RedirectIfAuthed } from "@/components/require-auth";
+import { sanitizeAppPath } from "@/lib/safe-path";
 
 export function LoginPage() {
   return (
@@ -14,19 +15,50 @@ export function LoginPage() {
 }
 
 function LoginForm() {
-  const { login } = useAuth();
+  const {
+    signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    googleEnabled,
+    ensureError,
+    retryEnsureUser,
+    logout,
+  } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  const redirectTo = sanitizeAppPath(
+    new URLSearchParams(window.location.search).get("redirect"),
+    "/dashboard",
+  );
+
+  async function onGoogle() {
+    setError(null);
+    setPending(true);
+    try {
+      await signInWithGoogle(redirectTo);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed");
+      setPending(false);
+    }
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setPending(true);
     try {
-      await login(username);
-      navigate("/dashboard", { replace: true });
+      if (mode === "signin") {
+        await signInWithEmail(email.trim(), password);
+      } else {
+        await signUpWithEmail(email.trim(), password, name.trim() || undefined);
+      }
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");
     } finally {
@@ -57,36 +89,140 @@ function LoginForm() {
           Sign in
         </h1>
         <p className="mt-2 text-body-sm text-on-surface/60">
-          Enter your username to continue.
+          {googleEnabled
+            ? "Continue with Google, or use email and password."
+            : "Sign in with email and password."}
         </p>
 
-        <form onSubmit={onSubmit} className="mt-stack-md flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-label-caps text-on-surface-variant">
-              Username
-            </span>
-            <Input
-              name="username"
-              autoComplete="username"
-              autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your-username"
-              disabled={pending}
-              required
-            />
-          </label>
-
-          {error ? (
+        {ensureError ? (
+          <div className="mt-4 flex flex-col gap-2 rounded-md border border-error/40 p-3">
             <p className="text-body-sm text-error" role="alert">
-              {error}
+              {ensureError}
             </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="text-body-sm text-on-surface/70 underline-offset-2 hover:underline"
+                onClick={() => retryEnsureUser()}
+              >
+                Retry linking account
+              </button>
+              <button
+                type="button"
+                className="text-body-sm text-on-surface/70 underline-offset-2 hover:underline"
+                onClick={() => {
+                  void logout();
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-stack-md flex flex-col gap-3">
+          {googleEnabled ? (
+            <>
+              <Button type="button" onClick={onGoogle} disabled={pending}>
+                Continue with Google
+              </Button>
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-label-caps text-on-surface-variant">
+                  or
+                </span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+            </>
           ) : null}
 
-          <Button type="submit" disabled={pending || !username.trim()}>
-            {pending ? "Signing in…" : "Continue"}
-          </Button>
-        </form>
+          <form onSubmit={onSubmit} className="flex flex-col gap-3">
+            {mode === "signup" ? (
+              <label className="flex flex-col gap-1.5">
+                <span className="text-label-caps text-on-surface-variant">
+                  Name
+                </span>
+                <Input
+                  name="name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  disabled={pending}
+                />
+              </label>
+            ) : null}
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-label-caps text-on-surface-variant">
+                Email
+              </span>
+              <Input
+                name="email"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                disabled={pending}
+                required
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-label-caps text-on-surface-variant">
+                Password
+              </span>
+              <Input
+                name="password"
+                type="password"
+                autoComplete={
+                  mode === "signin" ? "current-password" : "new-password"
+                }
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={pending}
+                required
+                minLength={8}
+              />
+            </label>
+
+            {error ? (
+              <p className="text-body-sm text-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            <Button
+              type="submit"
+              disabled={pending || !email.trim() || password.length < 8}
+            >
+              {pending
+                ? mode === "signin"
+                  ? "Signing in…"
+                  : "Creating account…"
+                : mode === "signin"
+                  ? "Sign in with email"
+                  : "Create account"}
+            </Button>
+          </form>
+
+          <button
+            type="button"
+            className="text-body-sm text-on-surface/60 underline-offset-2 hover:underline"
+            onClick={() => {
+              setMode(mode === "signin" ? "signup" : "signin");
+              setError(null);
+            }}
+            disabled={pending}
+          >
+            {mode === "signin"
+              ? "Need an account? Sign up"
+              : "Already have an account? Sign in"}
+          </button>
+        </div>
       </div>
     </div>
   );

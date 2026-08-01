@@ -5,6 +5,7 @@ import {
   toKuveraConvexPayload,
 } from "@nook/persistence";
 import type { KuveraConvexWritePayload } from "@nook/persistence";
+import { createAuthedConvexClient } from "../lib/convex-auth";
 import {
   resolveWealthFiles,
   printSuccess,
@@ -18,7 +19,6 @@ export const wealthParseCommand = new Command("parse")
   .option("--out <dir>", "Write JSON results to directory")
   .option("--dry-run", "Run pipeline without writing output")
   .option("--convex", "Upsert to Convex wealth store")
-  .option("--user <username>", "Username for Convex operations")
   .action(
     async (
       inputPath: string,
@@ -26,17 +26,16 @@ export const wealthParseCommand = new Command("parse")
         out?: string;
         dryRun?: boolean;
         convex?: boolean;
-        user?: string;
       },
     ) => {
-      if (opts.convex && !opts.user) {
-        printFail("--user is required for Convex operations");
-        process.exit(1);
-      }
-
       let convexClient: WealthConvexClient | null = null;
       if (opts.convex && !opts.dryRun) {
-        convexClient = await initWealthConvexClient();
+        try {
+          convexClient = await initWealthConvexClient();
+        } catch (err) {
+          printFail(err instanceof Error ? err.message : String(err));
+          process.exit(1);
+        }
       }
 
       const files = resolveWealthFiles(inputPath);
@@ -85,12 +84,8 @@ export const wealthParseCommand = new Command("parse")
 
         if (convexClient && result.wealthStatement) {
           try {
-            const userId = await convexClient.resolveUser(opts.user!);
             const payload = toKuveraConvexPayload(result);
-            const upsert = await convexClient.upsertKuveraCapitalGains(
-              userId,
-              payload,
-            );
+            const upsert = await convexClient.upsertKuveraCapitalGains(payload);
             printSuccess(
               `Convex ${upsert.action}: instruments=${upsert.instrumentsUpserted}, txns+${upsert.transactionsUpserted}/skip ${upsert.transactionsSkipped}, holdings=${upsert.holdingsRecomputed}`,
             );
@@ -105,11 +100,7 @@ export const wealthParseCommand = new Command("parse")
   );
 
 interface WealthConvexClient {
-  resolveUser(username: string): Promise<string>;
-  upsertKuveraCapitalGains(
-    userId: string,
-    payload: KuveraConvexWritePayload,
-  ): Promise<{
+  upsertKuveraCapitalGains(payload: KuveraConvexWritePayload): Promise<{
     documentId: string;
     action: string;
     instrumentsUpserted: number;
@@ -120,33 +111,13 @@ interface WealthConvexClient {
 }
 
 async function initWealthConvexClient(): Promise<WealthConvexClient> {
-  const { ConvexHttpClient } = await import("convex/browser");
   const { api } = await import("@nook/convex/_generated/api");
-
-  const url = process.env["CONVEX_URL"];
-  if (!url) {
-    throw new Error(
-      "CONVEX_URL environment variable is required for Convex operations",
-    );
-  }
-
-  const client = new ConvexHttpClient(url);
+  const { client, refreshAuth } = await createAuthedConvexClient();
 
   return {
-    async resolveUser(username: string): Promise<string> {
-      const user = await client.query(api.users.getByUsername, { username });
-      if (!user) {
-        return await client.mutation(api.users.create, {
-          username,
-          name: username,
-        });
-      }
-      return user._id;
-    },
-
-    async upsertKuveraCapitalGains(userId, payload) {
+    async upsertKuveraCapitalGains(payload) {
+      await refreshAuth();
       return await client.mutation(api.wealth.upsertKuveraCapitalGains, {
-        userId: userId as never,
         ...payload,
       });
     },
