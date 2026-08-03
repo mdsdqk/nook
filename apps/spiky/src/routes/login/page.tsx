@@ -43,7 +43,9 @@ function LoginForm() {
       ? googleEnabled
         ? "Continue with Google, or use your username or email."
         : "Sign in with your username or email."
-      : "Create a Nook account with a username and email.";
+      : googleEnabled
+        ? "Create a Nook account with Google, or with a username and email."
+        : "Create a Nook account with a username and email.";
 
   async function onGoogle() {
     setError(null);

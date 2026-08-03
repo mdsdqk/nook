@@ -22,6 +22,7 @@ export const authComponent = createClient<DataModel>(components.betterAuth);
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
   const googleClientId = process.env["GOOGLE_CLIENT_ID"];
   const googleClientSecret = process.env["GOOGLE_CLIENT_SECRET"];
+  const googleEnabled = Boolean(googleClientId && googleClientSecret);
 
   return betterAuth({
     baseURL: process.env["CONVEX_SITE_URL"] as string,
@@ -31,12 +32,21 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       enabled: true,
       requireEmailVerification: false,
     },
-    ...(googleClientId && googleClientSecret
+    account: {
+      accountLinking: {
+        enabled: true,
+        // Google confirms email ownership; allow linking to an existing
+        // email/password user with the same address (including when that
+        // local account has not completed email verification yet).
+        trustedProviders: googleEnabled ? ["google"] : [],
+      },
+    },
+    ...(googleEnabled
       ? {
           socialProviders: {
             google: {
-              clientId: googleClientId,
-              clientSecret: googleClientSecret,
+              clientId: googleClientId!,
+              clientSecret: googleClientSecret!,
             },
           },
         }

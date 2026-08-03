@@ -4,14 +4,29 @@ import { useAuth } from "@/lib/auth";
 import { sanitizeAppPath } from "@/lib/safe-path";
 
 export function RequireAuth() {
-  const { isAuthenticated, isLoading, ensureError, retryEnsureUser, logout } =
-    useAuth();
+  const {
+    isAuthenticated,
+    isLoading,
+    ensureError,
+    retryEnsureUser,
+    logout,
+    cancelAuthHandoff,
+  } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-body-sm text-on-surface/60">
-        Loading…
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-body-sm text-on-surface/60">Loading…</p>
+        <button
+          type="button"
+          className="text-body-sm text-on-surface/50 underline-offset-2 hover:underline"
+          onClick={() => {
+            cancelAuthHandoff();
+          }}
+        >
+          Cancel
+        </button>
       </div>
     );
   }
@@ -50,12 +65,21 @@ export function RequireAuth() {
 }
 
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, cancelAuthHandoff } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-body-sm text-on-surface/60">
-        Loading…
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-body-sm text-on-surface/60">Loading…</p>
+        <button
+          type="button"
+          className="text-body-sm text-on-surface/50 underline-offset-2 hover:underline"
+          onClick={() => {
+            cancelAuthHandoff();
+          }}
+        >
+          Cancel
+        </button>
       </div>
     );
   }

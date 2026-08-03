@@ -28,6 +28,8 @@ type AuthContextValue = {
   isLoading: boolean;
   ensureError: string | null;
   googleEnabled: boolean;
+  /** False until authPublic.providers has resolved at least once this session. */
+  providersReady: boolean;
   signInWithGoogle: (callbackURL?: string) => Promise<void>;
   signInWithIdentifier: (identifier: string, password: string) => Promise<void>;
   signUpWithUsername: (args: {
@@ -38,9 +40,32 @@ type AuthContextValue = {
   }) => Promise<void>;
   logout: () => Promise<void>;
   retryEnsureUser: () => void;
+  cancelAuthHandoff: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+const HANDOFF_KEY = "nook.authHandoff";
+
+function readHandoffFlag(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (sessionStorage.getItem(HANDOFF_KEY) === "1") return true;
+    return new URLSearchParams(window.location.search).has("ott");
+  } catch {
+    return false;
+  }
+}
+
+function writeHandoffFlag(active: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    if (active) sessionStorage.setItem(HANDOFF_KEY, "1");
+    else sessionStorage.removeItem(HANDOFF_KEY);
+  } catch {
+    // private mode / blocked storage
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const betterAuthSession = authClient.useSession();
@@ -58,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     providersRef.current = providers;
   }
   const resolvedProviders = providers ?? providersRef.current;
+  const providersReady = resolvedProviders !== undefined;
 
   const hasBetterAuthSession = Boolean(betterAuthSession.data?.session);
   const isSessionPending = betterAuthSession.isPending;
@@ -78,10 +104,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [ensuring, setEnsuring] = useState(false);
   const [ensureError, setEnsureError] = useState<string | null>(null);
-  // True from the start of email/username auth until the app user is linked
-  // (or a hard error). Prevents /dashboard ↔ /login bounce after signup.
-  const [authHandoff, setAuthHandoff] = useState(false);
+  // Survives Google full-page redirect via sessionStorage / ott query param.
+  const [authHandoff, setAuthHandoff] = useState(readHandoffFlag);
   const ensureAttemptedRef = useRef(false);
+
+  const beginHandoff = useCallback(() => {
+    writeHandoffFlag(true);
+    setAuthHandoff(true);
+    setEnsureError(null);
+    ensureAttemptedRef.current = false;
+  }, []);
+
+  const endHandoff = useCallback(() => {
+    writeHandoffFlag(false);
+    setAuthHandoff(false);
+  }, []);
 
   const session: Session | null = useMemo(() => {
     if (!appUser) return null;
@@ -99,19 +136,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!hasBetterAuthSession) {
       ensureAttemptedRef.current = false;
       setEnsureError(null);
-      setAuthHandoff(false);
       setEnsuring(false);
+      // Keep authHandoff across the Google redirect gap (no BA session yet).
+      // endHandoff runs when the app user is linked, on error, or cancel.
     }
   }, [hasBetterAuthSession]);
 
   // Once the app user is linked, handoff is complete.
   useEffect(() => {
     if (session) {
-      setAuthHandoff(false);
+      endHandoff();
       setEnsuring(false);
       setEnsureError(null);
     }
-  }, [session]);
+  }, [session, endHandoff]);
 
   // Link app user when Convex auth is ready and no app user exists yet.
   useEffect(() => {
@@ -132,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           err instanceof Error ? err.message : "Failed to create app user";
         console.error("Failed to ensure app user", err);
         setEnsureError(message);
-        setAuthHandoff(false);
+        endHandoff();
       })
       .finally(() => {
         setEnsuring(false);
@@ -144,20 +182,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ensuring,
     ensureError,
     ensureUser,
+    endHandoff,
   ]);
 
   const retryEnsureUser = useCallback(() => {
     ensureAttemptedRef.current = false;
     setEnsureError(null);
-    setAuthHandoff(true);
-  }, []);
+    beginHandoff();
+  }, [beginHandoff]);
 
-  const signInWithGoogle = useCallback(async (callbackURL = "/dashboard") => {
-    await authClient.signIn.social({
-      provider: "google",
-      callbackURL: sanitizeAppPath(callbackURL),
-    });
-  }, []);
+  const cancelAuthHandoff = useCallback(() => {
+    endHandoff();
+  }, [endHandoff]);
+
+  const signInWithGoogle = useCallback(
+    async (callbackURL = "/dashboard") => {
+      beginHandoff();
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: sanitizeAppPath(callbackURL),
+      });
+    },
+    [beginHandoff],
+  );
 
   const signInWithIdentifier = useCallback(
     async (identifier: string, password: string) => {
@@ -165,9 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!value) {
         throw new Error("Enter a username or email");
       }
-      setAuthHandoff(true);
-      setEnsureError(null);
-      ensureAttemptedRef.current = false;
+      beginHandoff();
       try {
         const result = looksLikeEmail(value)
           ? await authClient.signIn.email({ email: value, password })
@@ -180,11 +225,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         // App user linking runs in the effect once useConvexAuth is ready.
       } catch (err) {
-        setAuthHandoff(false);
+        endHandoff();
         throw err;
       }
     },
-    [],
+    [beginHandoff, endHandoff],
   );
 
   const signUpWithUsername = useCallback(
@@ -202,9 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!email) {
         throw new Error("Email is required");
       }
-      setAuthHandoff(true);
-      setEnsureError(null);
-      ensureAttemptedRef.current = false;
+      beginHandoff();
       try {
         const result = await authClient.signUp.email({
           email,
@@ -217,25 +260,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         // App user linking runs in the effect once useConvexAuth is ready.
       } catch (err) {
-        setAuthHandoff(false);
+        endHandoff();
         throw err;
       }
     },
-    [],
+    [beginHandoff, endHandoff],
   );
 
   const logout = useCallback(async () => {
-    setAuthHandoff(false);
+    endHandoff();
     await authClient.signOut();
-  }, []);
+  }, [endHandoff]);
 
   // Stay in loading until Convex JWT is ready and the app user is linked.
+  // authHandoff covers the Google redirect gap before BA session exists.
   const waitingForAppUser =
     hasBetterAuthSession && session === null && !ensureError;
+
+  // Hold the login form until we know whether Google is enabled (avoids layout shift).
+  const waitingForProviders = !providersReady && !hasBetterAuthSession;
 
   const isLoading =
     waitingOnSession ||
     authHandoff ||
+    waitingForProviders ||
     (hasBetterAuthSession && convexAuthLoading) ||
     waitingForAppUser;
 
@@ -246,22 +294,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       ensureError,
       googleEnabled: resolvedProviders?.google ?? false,
+      providersReady,
       signInWithGoogle,
       signInWithIdentifier,
       signUpWithUsername,
       logout,
       retryEnsureUser,
+      cancelAuthHandoff,
     }),
     [
       session,
       isLoading,
       ensureError,
       resolvedProviders?.google,
+      providersReady,
       signInWithGoogle,
       signInWithIdentifier,
       signUpWithUsername,
       logout,
       retryEnsureUser,
+      cancelAuthHandoff,
     ],
   );
 

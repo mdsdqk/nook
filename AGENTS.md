@@ -26,6 +26,7 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
   - `TRUSTED_ORIGINS` — optional comma-separated extra origins for LAN/test machines, e.g. `http://192.168.1.20:5174`
   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — required for Google sign-in
 - Google Cloud OAuth Web client redirect URI: `https://<deployment>.convex.site/api/auth/callback/google` (needs a real `.convex.site` URL; email/password works without Google).
+- **Same email, Google after password:** account linking is enabled with `trustedProviders: ["google"]`. Signing in with Google using an email that already has a password account links Google to that Better Auth user (same app user after `ensureCurrentUser`). Prefer separate OAuth clients for dev vs prod.
 - Spiky (`apps/spiky/.env.local`): `VITE_CONVEX_URL`, `VITE_CONVEX_SITE_URL` (`.site`), `VITE_SITE_URL=http://localhost:5174`. See `apps/spiky/.env.example`.
 - CLI: `bun run statement auth login|logout|status`. Optional `NOOK_SPIKY_URL` (default `http://localhost:5174`). Optional `NOOK_SPIKY_ALLOWED_ORIGINS` (comma-separated extra callback Origins; loopback equivalents of `NOOK_SPIKY_URL` are always allowed). Session token is stored; Convex JWTs are refreshed from `/api/auth/convex/token`.
 
