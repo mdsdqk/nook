@@ -117,25 +117,24 @@ export type UnsyncedStatement = {
 };
 
 export function useMoney(filters: TransactionFilters = defaultFilters) {
-  const { session } = useAuth();
-  const userId = session?.userId;
+  const { isAuthenticated } = useAuth();
   const asOfDate = todayIso();
 
   const accountsQuery = useQuery(
     api.accounts.list,
-    userId ? { userId, asOfDate } : "skip",
+    isAuthenticated ? { asOfDate } : "skip",
   );
   const transactionsQuery = useQuery(
     api.transactions.list,
-    userId ? { userId } : "skip",
+    isAuthenticated ? {} : "skip",
   );
   const cashFlowQuery = useQuery(
     api.dashboard.cashflowTimeline,
-    userId ? { userId, granularity: "monthly" } : "skip",
+    isAuthenticated ? { granularity: "monthly" } : "skip",
   );
   const unsyncedQuery = useQuery(
     api.ledgerSync.listUnsynced,
-    userId ? { userId } : "skip",
+    isAuthenticated ? {} : "skip",
   );
 
   const createAccountMut = useMutation(api.accounts.create);
@@ -158,7 +157,7 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
   const normalizedLegacyRef = useRef(false);
 
   useEffect(() => {
-    if (!userId || !accountsQuery || normalizedLegacyRef.current) return;
+    if (!isAuthenticated || !accountsQuery || normalizedLegacyRef.current) return;
     const hasLegacy = accountsQuery.some(
       (account) => account.type === "asset.bank",
     );
@@ -167,11 +166,11 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
       return;
     }
     normalizedLegacyRef.current = true;
-    void normalizeBankTypesMut({ userId });
-  }, [userId, accountsQuery, normalizeBankTypesMut]);
+    void normalizeBankTypesMut({});
+  }, [isAuthenticated, accountsQuery, normalizeBankTypesMut]);
 
   const isLoading =
-    userId !== undefined &&
+    isAuthenticated &&
     (accountsQuery === undefined ||
       transactionsQuery === undefined ||
       cashFlowQuery === undefined ||
@@ -229,9 +228,8 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
 
   const createAccount = useCallback(
     async (input: AccountInput) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!isAuthenticated) throw new Error("Not authenticated");
       await createAccountMut({
-        userId,
         name: input.name,
         type: input.type,
         currency: input.currency,
@@ -245,14 +243,13 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
           : {}),
       });
     },
-    [userId, createAccountMut, asOfDate],
+    [isAuthenticated, createAccountMut, asOfDate],
   );
 
   const updateAccount = useCallback(
     async (id: string, input: AccountInput) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!isAuthenticated) throw new Error("Not authenticated");
       await updateAccountMut({
-        userId,
         accountId: id as Id<"accounts">,
         name: input.name,
         type: input.type,
@@ -267,26 +264,24 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
           : {}),
       });
     },
-    [userId, updateAccountMut, asOfDate],
+    [isAuthenticated, updateAccountMut, asOfDate],
   );
 
   const deleteAccount = useCallback(
     async (id: string) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!isAuthenticated) throw new Error("Not authenticated");
       await removeAccountMut({
-        userId,
         accountId: id as Id<"accounts">,
       });
     },
-    [userId, removeAccountMut],
+    [isAuthenticated, removeAccountMut],
   );
 
   const createTransaction = useCallback(
     async (input: TransactionInput) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!isAuthenticated) throw new Error("Not authenticated");
       const category = input.category?.trim();
       await createTxnMut({
-        userId,
         accountId: input.accountId as Id<"accounts">,
         date: input.date,
         direction: input.direction,
@@ -303,14 +298,13 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
       });
     },
-    [userId, createTxnMut],
+    [isAuthenticated, createTxnMut],
   );
 
   const updateTransaction = useCallback(
     async (id: string, input: TransactionInput) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!isAuthenticated) throw new Error("Not authenticated");
       await updateTxnMut({
-        userId,
         transactionId: id as Id<"transactions">,
         accountId: input.accountId as Id<"accounts">,
         date: input.date,
@@ -329,37 +323,36 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
       });
     },
-    [userId, updateTxnMut],
+    [isAuthenticated, updateTxnMut],
   );
 
   const deleteTransaction = useCallback(
     async (id: string) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!isAuthenticated) throw new Error("Not authenticated");
       await removeTxnMut({
-        userId,
         transactionId: id as Id<"transactions">,
       });
     },
-    [userId, removeTxnMut],
+    [isAuthenticated, removeTxnMut],
   );
 
   const syncPendingStatements = useCallback(async () => {
-    if (!userId) throw new Error("Not authenticated");
+    if (!isAuthenticated) throw new Error("Not authenticated");
     setSyncPending(true);
     setSyncError(null);
     try {
-      await syncPendingMut({ userId });
+      await syncPendingMut({});
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Sync failed");
       throw err;
     } finally {
       setSyncPending(false);
     }
-  }, [userId, syncPendingMut]);
+  }, [isAuthenticated, syncPendingMut]);
 
   const syncTransfers = useCallback(async (): Promise<SyncedTransferPair[]> => {
-    if (!userId) throw new Error("Not authenticated");
-    const result = await syncTransfersMut({ userId });
+    if (!isAuthenticated) throw new Error("Not authenticated");
+    const result = await syncTransfersMut({});
     return result.pairs.map((pair) => {
       const mapped: SyncedTransferPair = {
         outId: pair.outId,
@@ -378,18 +371,17 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
       }
       return mapped;
     });
-  }, [userId, syncTransfersMut]);
+  }, [isAuthenticated, syncTransfersMut]);
 
   const rejectTransferPairs = useCallback(
     async (outIds: string[]) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!isAuthenticated) throw new Error("Not authenticated");
       if (outIds.length === 0) return;
       await rejectTransferPairsMut({
-        userId,
         outIds: outIds as Id<"transactions">[],
       });
     },
-    [userId, rejectTransferPairsMut],
+    [isAuthenticated, rejectTransferPairsMut],
   );
 
   return {

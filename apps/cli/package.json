@@ -11,16 +11,17 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "bun test src"
   },
   "dependencies": {
-    "@nook/pipeline": "workspace:*",
-    "@nook/persistence": "workspace:*",
     "@nook/contracts": "workspace:*",
-    "@nook/shared": "workspace:*",
     "@nook/convex": "workspace:*",
+    "@nook/persistence": "workspace:*",
+    "@nook/pipeline": "workspace:*",
+    "@nook/shared": "workspace:*",
     "commander": "^13.1.0",
-    "convex": "^1.17.0"
+    "convex": "^1.43.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

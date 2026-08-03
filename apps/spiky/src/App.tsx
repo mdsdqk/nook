@@ -5,6 +5,7 @@ import {
 } from "@/components/require-auth";
 import { AppShell } from "@/components/app-shell";
 import { LoginPage } from "@/routes/login/page";
+import { CliAuthPage } from "@/routes/cli-auth/page";
 import { DashboardPage } from "@/routes/dashboard/page";
 import { MoneyPage } from "@/routes/money/page";
 import { GalleryPage } from "@/routes/gallery/page";
@@ -15,6 +16,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<AuthRedirect />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/cli-auth" element={<CliAuthPage />} />
         <Route path="/gallery" element={<GalleryPage />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>

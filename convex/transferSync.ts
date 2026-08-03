@@ -3,6 +3,7 @@ import { matchTransferPairs } from "@nook/domain";
 import { mutation } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import { getAppUser } from "./lib/auth";
 import { unlinkTransferPair } from "./lib/transferLinks";
 
 const syncedPairValidator = v.object({
@@ -50,7 +51,9 @@ async function linkTransferLeg(
   await ctx.db.patch(txn._id, link);
 }
 
-function isLinkedTransferOut(txn: Doc<"transactions">): txn is Doc<"transactions"> & {
+function isLinkedTransferOut(
+  txn: Doc<"transactions">,
+): txn is Doc<"transactions"> & {
   transferRole: "out";
   linkedTransactionId: Id<"transactions">;
 } {
@@ -62,16 +65,15 @@ function isLinkedTransferOut(txn: Doc<"transactions">): txn is Doc<"transactions
 }
 
 export const syncTransfers = mutation({
-  args: {
-    userId: v.id("users"),
-  },
+  args: {},
   returns: v.object({
     pairs: v.array(syncedPairValidator),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const user = await getAppUser(ctx);
     const accounts = await ctx.db
       .query("accounts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const currencyByAccount = new Map(
@@ -80,7 +82,7 @@ export const syncTransfers = mutation({
 
     const txns = await ctx.db
       .query("transactions")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const matchable = txns.flatMap((txn) => {
@@ -151,14 +153,14 @@ export const syncTransfers = mutation({
 
 export const rejectTransferPairs = mutation({
   args: {
-    userId: v.id("users"),
     outIds: v.array(v.id("transactions")),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     for (const outId of args.outIds) {
       const outTxn = await ctx.db.get(outId);
-      if (!outTxn || outTxn.userId !== args.userId) {
+      if (!outTxn || outTxn.userId !== user._id) {
         throw new Error("Transfer pair not found");
       }
       if (!isLinkedTransferOut(outTxn)) {
@@ -168,7 +170,7 @@ export const rejectTransferPairs = mutation({
       const inTxn = await ctx.db.get(outTxn.linkedTransactionId);
       if (
         !inTxn ||
-        inTxn.userId !== args.userId ||
+        inTxn.userId !== user._id ||
         inTxn.linkedTransactionId !== outId ||
         inTxn.transferRole !== "in"
       ) {

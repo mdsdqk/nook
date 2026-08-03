@@ -68,11 +68,14 @@ export function AppShell() {
 
   function handleLogout() {
     setMenuOpen(false);
-    logout();
+    // Navigate immediately; RequireAuth also redirects once the session
+    // clears. Don't wait on signOut — that left /dashboard mounted until
+    // Convex reconnect finished and made the login screen flash/reload.
+    void logout();
     navigate("/login", { replace: true });
   }
 
-  const displayName = session?.name ?? session?.username ?? "User";
+  const displayName = session?.name ?? session?.email ?? "User";
 
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-on-surface">
@@ -162,7 +165,7 @@ export function AppShell() {
                   {displayName}
                 </span>
                 <span className="block truncate text-label-caps text-on-surface/40">
-                  @{session?.username}
+                  {session?.email}
                 </span>
               </span>
             </button>

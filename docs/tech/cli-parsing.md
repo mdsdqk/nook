@@ -466,6 +466,27 @@ Transactions should include:
 
 # CLI Commands
 
+## Auth (Convex)
+
+Convex persistence requires a Better Auth session (Google or email/password via Spiky):
+
+```bash
+# Spiky must be running (bun run dev:spiky) with VITE_CONVEX_* set
+bun run statement auth login
+bun run statement auth status
+bun run statement auth logout
+```
+
+Credentials are stored at `~/.config/nook/credentials.json`. Then:
+
+```bash
+export CONVEX_URL=https://your-deployment.convex.cloud   # optional if already in credentials
+bun run statement parse statement.pdf --convex
+bun run statement parse statement.pdf --sync-ledger
+```
+
+Username `--user` is no longer supported — identity comes from the logged-in session.
+
 ## Parse
 
 ```bash

@@ -118,7 +118,7 @@ xlsx → XlsxWorkbookReader → KuveraCgDetector → KuveraCgParser
     → CLI (--out JSON | --convex upsertKuveraCapitalGains)
 ```
 
-CLI: `bun run wealth parse <xlsx> [--out dir] [--convex --user <name>]`
+CLI: `bun run wealth parse <xlsx> [--out dir] [--convex]` (requires `bun run statement auth login` first)
 
 Each CG row is a **closed FIFO lot** (purchase + redemption). Importing CG alone typically yields **zero open quantity** after holding recompute. Open holdings require a separate holdings/CAS statement (out of scope).
 

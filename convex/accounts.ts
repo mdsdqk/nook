@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { ACCOUNT_TYPE_REGISTRY, type AccountType } from "@nook/domain";
 import { mutation, query } from "./_generated/server";
+import { getAppUser } from "./lib/auth";
 import { computeBalancesForUser, upsertManualAssertion } from "./lib/balances";
 import { shiftIsoDate } from "./lib/dates";
 import { requireUserAccount } from "./lib/ownership";
@@ -38,21 +39,17 @@ const accountWithBalanceValidator = v.object({
 
 export const list = query({
   args: {
-    userId: v.id("users"),
     asOfDate: v.string(),
   },
   returns: v.array(accountWithBalanceValidator),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const accounts = await ctx.db
       .query("accounts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
-    const balances = await computeBalancesForUser(
-      ctx,
-      args.userId,
-      args.asOfDate,
-    );
+    const balances = await computeBalancesForUser(ctx, user._id, args.asOfDate);
 
     return accounts.map((account) => ({
       ...account,
@@ -63,21 +60,17 @@ export const list = query({
 
 export const get = query({
   args: {
-    userId: v.id("users"),
     accountId: v.id("accounts"),
     asOfDate: v.string(),
   },
   returns: v.union(accountWithBalanceValidator, v.null()),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.userId !== args.userId) {
+    if (!account || account.userId !== user._id) {
       return null;
     }
-    const balances = await computeBalancesForUser(
-      ctx,
-      args.userId,
-      args.asOfDate,
-    );
+    const balances = await computeBalancesForUser(ctx, user._id, args.asOfDate);
     return {
       ...account,
       balance: balances.get(account._id) ?? 0,
@@ -87,7 +80,6 @@ export const get = query({
 
 export const create = mutation({
   args: {
-    userId: v.id("users"),
     name: v.string(),
     type: v.string(),
     currency: v.string(),
@@ -98,10 +90,11 @@ export const create = mutation({
   },
   returns: v.id("accounts"),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     assertValidAccountType(args.type);
 
     const accountId = await ctx.db.insert("accounts", {
-      userId: args.userId,
+      userId: user._id,
       name: args.name,
       type: args.type,
       currency: args.currency,
@@ -124,7 +117,6 @@ export const create = mutation({
 
 export const update = mutation({
   args: {
-    userId: v.id("users"),
     accountId: v.id("accounts"),
     name: v.optional(v.string()),
     type: v.optional(v.string()),
@@ -136,7 +128,8 @@ export const update = mutation({
   },
   returns: v.id("accounts"),
   handler: async (ctx, args) => {
-    await requireUserAccount(ctx, args.userId, args.accountId);
+    const user = await getAppUser(ctx);
+    await requireUserAccount(ctx, user._id, args.accountId);
 
     if (args.type !== undefined) {
       assertValidAccountType(args.type);
@@ -180,12 +173,12 @@ export const update = mutation({
 
 export const remove = mutation({
   args: {
-    userId: v.id("users"),
     accountId: v.id("accounts"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireUserAccount(ctx, args.userId, args.accountId);
+    const user = await getAppUser(ctx);
+    await requireUserAccount(ctx, user._id, args.accountId);
 
     const linkedTxn = await ctx.db
       .query("transactions")
@@ -213,16 +206,15 @@ export const remove = mutation({
 
 /** Map legacy `asset.bank` rows to `asset.bank.savings` (CLI sync default). */
 export const normalizeLegacyBankTypes = mutation({
-  args: {
-    userId: v.id("users"),
-  },
+  args: {},
   returns: v.object({
     updated: v.number(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
+    const user = await getAppUser(ctx);
     const accounts = await ctx.db
       .query("accounts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     let updated = 0;

@@ -1,6 +1,7 @@
 import { isCashflowIn, isSpending, isTransactionType } from "@nook/domain";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { getAppUser } from "./lib/auth";
 
 const MONTH_LABELS = [
   "Jan",
@@ -19,7 +20,6 @@ const MONTH_LABELS = [
 
 export const cashflowTimeline = query({
   args: {
-    userId: v.id("users"),
     granularity: v.literal("monthly"),
   },
   returns: v.array(
@@ -30,9 +30,10 @@ export const cashflowTimeline = query({
     }),
   ),
   handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
     const txns = await ctx.db
       .query("transactions")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const buckets = new Map<string, number>();
@@ -47,6 +48,9 @@ export const cashflowTimeline = query({
       const delta = direction === "credit" ? txn.amount : -txn.amount;
       buckets.set(key, (buckets.get(key) ?? 0) + delta);
     }
+
+    // granularity reserved for future weekly/daily buckets
+    void args.granularity;
 
     return [...buckets.entries()]
       .sort(([a], [b]) => a.localeCompare(b))

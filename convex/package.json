@@ -8,10 +8,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "convex": "^1.17.0",
-    "@nook/domain": "*"
+    "@convex-dev/better-auth": "^0.12.5",
+    "@nook/domain": "*",
+    "better-auth": "~1.6.15",
+    "convex": "^1.43.0"
   },
   "devDependencies": {
+    "@types/node": "^26.1.2",
     "typescript": "^5.7.2"
   }
 }

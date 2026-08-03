@@ -1,39 +1,99 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { authComponent } from "./auth";
+import { getAppUserOrNull, requireIdentity } from "./lib/auth";
 
-export const getByUsername = query({
-  args: { username: v.string() },
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      username: v.string(),
-      name: v.string(),
-    }),
-    v.null(),
-  ),
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
-      .first();
+const userValidator = v.object({
+  _id: v.id("users"),
+  _creationTime: v.number(),
+  authSubject: v.string(),
+  email: v.string(),
+  name: v.string(),
+  username: v.optional(v.string()),
+  image: v.optional(v.string()),
+});
+
+export const me = query({
+  args: {},
+  returns: v.union(userValidator, v.null()),
+  handler: async (ctx) => {
+    return await getAppUserOrNull(ctx);
   },
 });
 
-export const create = mutation({
-  args: {
-    username: v.string(),
-    name: v.string(),
-  },
-  returns: v.id("users"),
-  handler: async (ctx, args) => {
+export const ensureCurrentUser = mutation({
+  args: {},
+  returns: userValidator,
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx);
+    const email = identity.email?.trim() ?? "";
+    if (!email) {
+      throw new Error("Authenticated identity is missing an email address");
+    }
+
+    let username: string | undefined;
+    try {
+      const authUser = await authComponent.getAuthUser(ctx);
+      const raw =
+        authUser &&
+        typeof authUser === "object" &&
+        "username" in authUser &&
+        typeof (authUser as { username?: unknown }).username === "string"
+          ? (authUser as { username: string }).username.trim()
+          : "";
+      if (raw) username = raw;
+    } catch {
+      // Google / social sessions may not expose a Better Auth username yet.
+    }
+
+    const name =
+      identity.name?.trim() || username || email.split("@")[0] || email;
+    const image = identity.pictureUrl;
+
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
-      .first();
+      .withIndex("by_auth_subject", (q) =>
+        q.eq("authSubject", identity.tokenIdentifier),
+      )
+      .unique();
+
     if (existing) {
-      return existing._id;
+      const patch: {
+        email?: string;
+        name?: string;
+        username?: string;
+        image?: string;
+      } = {};
+      if (email && existing.email !== email) patch.email = email;
+      if (existing.name !== name) patch.name = name;
+      if (username !== undefined && existing.username !== username) {
+        patch.username = username;
+      }
+      if (image !== undefined && existing.image !== image) {
+        patch.image = image;
+      }
+      if (Object.keys(patch).length > 0) {
+        await ctx.db.patch(existing._id, patch);
+      }
+      const updated = await ctx.db.get(existing._id);
+      if (!updated) {
+        throw new Error("User not found after update");
+      }
+      return updated;
     }
-    return await ctx.db.insert("users", args);
+
+    const userId = await ctx.db.insert("users", {
+      authSubject: identity.tokenIdentifier,
+      email,
+      name,
+      ...(username !== undefined ? { username } : {}),
+      ...(image !== undefined ? { image } : {}),
+    });
+
+    const created = await ctx.db.get(userId);
+    if (!created) {
+      throw new Error("Failed to create user");
+    }
+    return created;
   },
 });

@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { parseFile } from "@nook/pipeline";
 import { JsonWriter, ConvexStatementWriter } from "@nook/persistence";
 import type { ConvexWritePayload } from "@nook/persistence";
+import { createAuthedConvexClient } from "../lib/convex-auth";
 import { resolveFiles, printSuccess, printFail, printInfo } from "./shared";
 
 export const parseCommand = new Command("parse")
@@ -11,7 +12,6 @@ export const parseCommand = new Command("parse")
   .option("--dry-run", "Run pipeline without writing output")
   .option("--convex", "Upsert to Convex statement store")
   .option("--sync-ledger", "Promote to ledger (implies --convex)")
-  .option("--user <username>", "Username for Convex operations")
   .action(
     async (
       inputPath: string,
@@ -20,19 +20,18 @@ export const parseCommand = new Command("parse")
         dryRun?: boolean;
         convex?: boolean;
         syncLedger?: boolean;
-        user?: string;
       },
     ) => {
       const useConvex = opts.convex || opts.syncLedger;
 
-      if (useConvex && !opts.user) {
-        printFail("--user is required for Convex operations");
-        process.exit(1);
-      }
-
       let convexClient: ConvexClientHelper | null = null;
       if (useConvex && !opts.dryRun) {
-        convexClient = await initConvexClient();
+        try {
+          convexClient = await initConvexClient();
+        } catch (err) {
+          printFail(err instanceof Error ? err.message : String(err));
+          process.exit(1);
+        }
       }
 
       const files = resolveFiles(inputPath);
@@ -88,16 +87,10 @@ export const parseCommand = new Command("parse")
         // Convex output
         if (convexClient && result.statement) {
           try {
-            const userId = await convexClient.resolveUser(opts.user!);
             const writer = new ConvexStatementWriter(
               async (payload: ConvexWritePayload) => {
-                const stmtResult = await convexClient!.upsertStatement(
-                  userId,
-                  payload,
-                );
-                printSuccess(
-                  `Stored in Convex (${stmtResult.action})`,
-                );
+                const stmtResult = await convexClient!.upsertStatement(payload);
+                printSuccess(`Stored in Convex (${stmtResult.action})`);
 
                 if (opts.syncLedger) {
                   if (!result.validation?.passed) {
@@ -107,7 +100,6 @@ export const parseCommand = new Command("parse")
                     return;
                   }
                   const syncResult = await convexClient!.syncLedger(
-                    userId,
                     stmtResult.statementId,
                     payload,
                   );
@@ -125,21 +117,14 @@ export const parseCommand = new Command("parse")
           }
         }
       }
-
-      if (convexClient) {
-        await convexClient.close();
-      }
     },
   );
 
 interface ConvexClientHelper {
-  resolveUser(username: string): Promise<string>;
   upsertStatement(
-    userId: string,
     payload: ConvexWritePayload,
   ): Promise<{ statementId: string; action: string }>;
   syncLedger(
-    userId: string,
     statementId: string,
     payload: ConvexWritePayload,
   ): Promise<{
@@ -148,52 +133,23 @@ interface ConvexClientHelper {
     transactionsUpserted: number;
     transactionsSkipped: number;
   }>;
-  close(): Promise<void>;
 }
 
 async function initConvexClient(): Promise<ConvexClientHelper> {
-  const { ConvexHttpClient } = await import("convex/browser");
   const { api } = await import("@nook/convex/_generated/api");
-
-  const url = process.env["CONVEX_URL"];
-  if (!url) {
-    throw new Error(
-      "CONVEX_URL environment variable is required for Convex operations",
-    );
-  }
-
-  const client = new ConvexHttpClient(url);
+  const { client, refreshAuth } = await createAuthedConvexClient();
 
   return {
-    async resolveUser(username: string): Promise<string> {
-      const user = await client.query(api.users.getByUsername, { username });
-      if (!user) {
-        const userId = await client.mutation(api.users.create, {
-          username,
-          name: username,
-        });
-        return userId;
-      }
-      return user._id;
-    },
-
-    async upsertStatement(
-      userId: string,
-      payload: ConvexWritePayload,
-    ) {
+    async upsertStatement(payload: ConvexWritePayload) {
+      await refreshAuth();
       return await client.mutation(api.statements.upsertStatement, {
-        userId: userId as never,
         ...payload,
       });
     },
 
-    async syncLedger(
-      userId: string,
-      statementId: string,
-      payload: ConvexWritePayload,
-    ) {
+    async syncLedger(statementId: string, payload: ConvexWritePayload) {
+      await refreshAuth();
       return await client.mutation(api.ledgerSync.syncFromStatement, {
-        userId: userId as never,
         statementId: statementId as never,
         bank: payload.bank,
         accountFingerprint: payload.accountFingerprint,
@@ -203,18 +159,16 @@ async function initConvexClient(): Promise<ConvexClientHelper> {
         periodEnd: payload.periodEnd,
         openingBalance: payload.openingBalance,
         closingBalance: payload.closingBalance,
-        transactions: payload.transactions.map((t) => ({
-          date: t.date,
-          narration: t.narration,
-          debit: t.debit,
-          credit: t.credit,
-          externalKey: t.externalKey,
-        })),
+        transactions: payload.transactions.map(
+          (t: ConvexWritePayload["transactions"][number]) => ({
+            date: t.date,
+            narration: t.narration,
+            ...(t.debit !== undefined ? { debit: t.debit } : {}),
+            ...(t.credit !== undefined ? { credit: t.credit } : {}),
+            externalKey: t.externalKey,
+          }),
+        ),
       });
-    },
-
-    async close() {
-      // ConvexHttpClient doesn't need explicit close
     },
   };
 }
