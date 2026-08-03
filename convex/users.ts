@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { authComponent } from "./auth";
 import { getAppUserOrNull, requireIdentity } from "./lib/auth";
 
 const userValidator = v.object({
@@ -8,6 +9,7 @@ const userValidator = v.object({
   authSubject: v.string(),
   email: v.string(),
   name: v.string(),
+  username: v.optional(v.string()),
   image: v.optional(v.string()),
 });
 
@@ -28,7 +30,24 @@ export const ensureCurrentUser = mutation({
     if (!email) {
       throw new Error("Authenticated identity is missing an email address");
     }
-    const name = identity.name?.trim() || email;
+
+    let username: string | undefined;
+    try {
+      const authUser = await authComponent.getAuthUser(ctx);
+      const raw =
+        authUser &&
+        typeof authUser === "object" &&
+        "username" in authUser &&
+        typeof (authUser as { username?: unknown }).username === "string"
+          ? (authUser as { username: string }).username.trim()
+          : "";
+      if (raw) username = raw;
+    } catch {
+      // Google / social sessions may not expose a Better Auth username yet.
+    }
+
+    const name =
+      identity.name?.trim() || username || email.split("@")[0] || email;
     const image = identity.pictureUrl;
 
     const existing = await ctx.db
@@ -42,10 +61,14 @@ export const ensureCurrentUser = mutation({
       const patch: {
         email?: string;
         name?: string;
+        username?: string;
         image?: string;
       } = {};
       if (email && existing.email !== email) patch.email = email;
       if (existing.name !== name) patch.name = name;
+      if (username !== undefined && existing.username !== username) {
+        patch.username = username;
+      }
       if (image !== undefined && existing.image !== image) {
         patch.image = image;
       }
@@ -63,6 +86,7 @@ export const ensureCurrentUser = mutation({
       authSubject: identity.tokenIdentifier,
       email,
       name,
+      ...(username !== undefined ? { username } : {}),
       ...(image !== undefined ? { image } : {}),
     });
 

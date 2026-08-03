@@ -1,4 +1,5 @@
 import { createAuthClient } from "better-auth/react";
+import { usernameClient } from "better-auth/client/plugins";
 import {
   convexClient,
   crossDomainClient,
@@ -14,5 +15,9 @@ if (!siteUrl) {
 
 export const authClient = createAuthClient({
   baseURL: siteUrl,
-  plugins: [convexClient(), crossDomainClient()],
+  plugins: [usernameClient(), convexClient(), crossDomainClient()],
 });
+
+export function looksLikeEmail(value: string): boolean {
+  return value.includes("@");
+}

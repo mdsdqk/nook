@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
@@ -17,15 +16,16 @@ export function LoginPage() {
 function LoginForm() {
   const {
     signInWithGoogle,
-    signInWithEmail,
-    signUpWithEmail,
+    signInWithIdentifier,
+    signUpWithUsername,
     googleEnabled,
     ensureError,
     retryEnsureUser,
     logout,
   } = useAuth();
-  const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [identifier, setIdentifier] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -36,6 +36,14 @@ function LoginForm() {
     new URLSearchParams(window.location.search).get("redirect"),
     "/dashboard",
   );
+
+  const title = mode === "signin" ? "Sign in" : "Sign up";
+  const subtitle =
+    mode === "signin"
+      ? googleEnabled
+        ? "Continue with Google, or use your username or email."
+        : "Sign in with your username or email."
+      : "Create a Nook account with a username and email.";
 
   async function onGoogle() {
     setError(null);
@@ -54,17 +62,36 @@ function LoginForm() {
     setPending(true);
     try {
       if (mode === "signin") {
-        await signInWithEmail(email.trim(), password);
+        await signInWithIdentifier(identifier, password);
       } else {
-        await signUpWithEmail(email.trim(), password, name.trim() || undefined);
+        const displayName = name.trim();
+        await signUpWithUsername({
+          username,
+          email,
+          password,
+          ...(displayName ? { name: displayName } : {}),
+        });
       }
-      navigate(redirectTo, { replace: true });
+      // Do not navigate here. AuthProvider keeps isLoading until the app user
+      // is linked; RedirectIfAuthed then sends us to the destination once.
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sign in");
-    } finally {
+      setError(
+        err instanceof Error
+          ? err.message
+          : mode === "signin"
+            ? "Could not sign in"
+            : "Could not sign up",
+      );
       setPending(false);
     }
   }
+
+  const canSubmit =
+    mode === "signin"
+      ? identifier.trim().length > 0 && password.length >= 8
+      : username.trim().length >= 3 &&
+        email.trim().includes("@") &&
+        password.length >= 8;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
@@ -86,13 +113,9 @@ function LoginForm() {
         </div>
 
         <h1 className="text-headline-lg font-semibold tracking-[-0.02em] text-white max-md:text-headline-lg-mobile">
-          Sign in
+          {title}
         </h1>
-        <p className="mt-2 text-body-sm text-on-surface/60">
-          {googleEnabled
-            ? "Continue with Google, or use email and password."
-            : "Sign in with email and password."}
-        </p>
+        <p className="mt-2 text-body-sm text-on-surface/60">{subtitle}</p>
 
         {ensureError ? (
           <div className="mt-4 flex flex-col gap-2 rounded-md border border-error/40 p-3">
@@ -138,37 +161,75 @@ function LoginForm() {
 
           <form onSubmit={onSubmit} className="flex flex-col gap-3">
             {mode === "signup" ? (
+              <>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps text-on-surface-variant">
+                    Username
+                  </span>
+                  <Input
+                    name="username"
+                    autoComplete="username"
+                    autoFocus
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="yourname"
+                    disabled={pending}
+                    required
+                    minLength={3}
+                    maxLength={30}
+                    pattern="[A-Za-z0-9_]+"
+                    title="Letters, numbers, and underscores only"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps text-on-surface-variant">
+                    Email
+                  </span>
+                  <Input
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    disabled={pending}
+                    required
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps text-on-surface-variant">
+                    Display name
+                    <span className="ml-1 text-on-surface/40">(optional)</span>
+                  </span>
+                  <Input
+                    name="name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    disabled={pending}
+                  />
+                </label>
+              </>
+            ) : (
               <label className="flex flex-col gap-1.5">
                 <span className="text-label-caps text-on-surface-variant">
-                  Name
+                  Username or email
                 </span>
                 <Input
-                  name="name"
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
+                  name="identifier"
+                  autoComplete="username"
+                  autoFocus
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="yourname or you@example.com"
                   disabled={pending}
+                  required
                 />
               </label>
-            ) : null}
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-label-caps text-on-surface-variant">
-                Email
-              </span>
-              <Input
-                name="email"
-                type="email"
-                autoComplete="email"
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                disabled={pending}
-                required
-              />
-            </label>
+            )}
 
             <label className="flex flex-col gap-1.5">
               <span className="text-label-caps text-on-surface-variant">
@@ -195,16 +256,13 @@ function LoginForm() {
               </p>
             ) : null}
 
-            <Button
-              type="submit"
-              disabled={pending || !email.trim() || password.length < 8}
-            >
+            <Button type="submit" disabled={pending || !canSubmit}>
               {pending
                 ? mode === "signin"
                   ? "Signing in…"
                   : "Creating account…"
                 : mode === "signin"
-                  ? "Sign in with email"
+                  ? "Sign in"
                   : "Create account"}
             </Button>
           </form>

@@ -17,9 +17,9 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 - `bun run lint` only runs in `@repo/ui` (the sole package with a `lint` script).
 
 ### Auth (Better Auth + Convex)
-- Auth is **Better Auth** via `@convex-dev/better-auth`. Google OAuth is primary; email/password is secondary (`requireEmailVerification: false` for now).
-- Scaffold: `convex/convex.config.ts`, `convex/auth.config.ts`, `convex/auth.ts`, `convex/http.ts`. Domain users live in `users` (`authSubject`, `email`, `name`) linked from `ctx.auth.getUserIdentity().tokenIdentifier`.
-- **Fresh start:** username-based users are gone. Clear old `users` / dependent data (or use a fresh deployment) and re-import statements after logging in.
+- Auth is **Better Auth** via `@convex-dev/better-auth`. Google OAuth is primary; email/password (+ username plugin) is secondary (`requireEmailVerification: false` for now). Sign-up requires username + email; sign-in accepts username or email.
+- Scaffold: `convex/convex.config.ts`, `convex/auth.config.ts`, `convex/auth.ts`, `convex/http.ts`. Domain users live in `users` (`authSubject`, `email`, `name`, optional `username`) linked from `ctx.auth.getUserIdentity().tokenIdentifier`.
+- **Fresh start:** pre-Better-Auth username-only users are gone. Clear old `users` / dependent data (or use a fresh deployment) and re-import statements after logging in.
 - Convex deployment env (set with `bunx convex env set`, not `.env.local`):
   - `BETTER_AUTH_SECRET` — random secret
   - `SITE_URL` — Spiky origin, e.g. `http://localhost:5174` (loopback hosts on the same port are auto-trusted: `localhost`, `127.0.0.1`, `[::1]`)
@@ -39,4 +39,4 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 
 ### Web / mobile
 - `apps/web` (`bun run dev:web`, Vite on port 5173) and `apps/mobile` (`bun run dev:mobile`, Expo) are scaffolds: stub pages with routing but no backend wiring yet.
-- `apps/spiky` (`bun run dev:spiky`, Vite on port 5174) is the React playground with Better Auth (Google + email) and money UI spikes before promoting into `apps/web`.
+- `apps/spiky` (`bun run dev:spiky`, Vite on port 5174) is the React playground with Better Auth (Google + username/email) and money UI spikes before promoting into `apps/web`.

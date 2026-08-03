@@ -6,10 +6,12 @@ export default defineSchema({
     authSubject: v.string(),
     email: v.string(),
     name: v.string(),
+    username: v.optional(v.string()),
     image: v.optional(v.string()),
   })
     .index("by_auth_subject", ["authSubject"])
-    .index("by_email", ["email"]),
+    .index("by_email", ["email"])
+    .index("by_username", ["username"]),
 
   accounts: defineTable({
     userId: v.id("users"),
