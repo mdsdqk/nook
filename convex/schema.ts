@@ -74,6 +74,8 @@ export default defineSchema({
     contentHash: v.string(),
     sourcePath: v.optional(v.string()),
     status: v.string(),
+    /** False when parse validation failed; excluded from ledger sync queues. */
+    validationPassed: v.optional(v.boolean()),
   })
     .index("by_user", ["userId"])
     .index("by_dedupe", [
@@ -84,6 +86,31 @@ export default defineSchema({
       "periodEnd",
     ])
     .index("by_content_hash", ["userId", "contentHash"]),
+
+  /** Short-lived ownership claim for uploaded statement PDFs. */
+  statementUploads: defineTable({
+    storageId: v.id("_storage"),
+    userId: v.id("users"),
+    filename: v.string(),
+    byteSize: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_storage", ["storageId"])
+    .index("by_user", ["userId"])
+    .index("by_created", ["createdAt"]),
+
+  /**
+   * Per-username import policy overrides (allowlist).
+   * Absent username → DEFAULT_IMPORT_POLICY.
+   */
+  importLimitOverrides: defineTable({
+    username: v.string(),
+    maxImportsPerHour: v.number(),
+    maxFilesPerBatch: v.number(),
+    maxBytesPerFile: v.number(),
+    maxBytesPerBatch: v.number(),
+    notes: v.optional(v.string()),
+  }).index("by_username", ["username"]),
 
   parsedTransactions: defineTable({
     statementId: v.id("parsedStatements"),

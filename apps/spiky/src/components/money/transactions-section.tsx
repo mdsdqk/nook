@@ -4,11 +4,9 @@ import { Button } from "@/components/ui/button";
 import { TransactionFiltersBar } from "@/components/money/transaction-filters";
 import { TransactionRow } from "@/components/money/transaction-row";
 import { TransactionFormDialog } from "@/components/money/transaction-form-dialog";
-import { SyncTransfersReviewDialog } from "@/components/money/sync-transfers-review-dialog";
 import type {
   MoneyAccount,
   MoneyTransaction,
-  SyncedTransferPair,
   TransactionFilters,
   TransactionInput,
 } from "@/lib/money/types";
@@ -22,8 +20,8 @@ type TransactionsSectionProps = {
   onCreate: (input: TransactionInput) => void | Promise<void>;
   onUpdate: (id: string, input: TransactionInput) => void | Promise<void>;
   onDelete: (id: string) => void | Promise<void>;
-  onSyncTransfers: () => Promise<SyncedTransferPair[]>;
-  onRejectTransferPairs: (outIds: string[]) => Promise<void>;
+  onImportStatements: () => void;
+  onSyncTransfers: () => void;
 };
 
 export function TransactionsSection({
@@ -35,16 +33,12 @@ export function TransactionsSection({
   onCreate,
   onUpdate,
   onDelete,
+  onImportStatements,
   onSyncTransfers,
-  onRejectTransferPairs,
 }: TransactionsSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MoneyTransaction | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [syncPending, setSyncPending] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewPairs, setReviewPairs] = useState<SyncedTransferPair[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const accountById = new Map(accounts.map((a) => [a.id, a]));
@@ -83,27 +77,6 @@ export function TransactionsSection({
     setDialogOpen(true);
   }
 
-  async function handleSyncTransfers() {
-    setMenuOpen(false);
-    setSyncPending(true);
-    setSyncMessage(null);
-    try {
-      const pairs = await onSyncTransfers();
-      if (pairs.length === 0) {
-        setSyncMessage("No new transfers found.");
-        return;
-      }
-      setReviewPairs(pairs);
-      setReviewOpen(true);
-    } catch (err) {
-      setSyncMessage(
-        err instanceof Error ? err.message : "Failed to sync transfers",
-      );
-    } finally {
-      setSyncPending(false);
-    }
-  }
-
   return (
     <section aria-labelledby="transactions-heading">
       <div className="mb-stack-sm flex flex-wrap items-end justify-between gap-3">
@@ -127,7 +100,6 @@ export function TransactionsSection({
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               aria-controls={menuId}
-              disabled={syncPending}
               onClick={() => setMenuOpen((open) => !open)}
             >
               <MoreVertical className="h-4 w-4" aria-hidden />
@@ -141,33 +113,30 @@ export function TransactionsSection({
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full cursor-default items-center px-3 py-2.5 text-left text-body-sm text-on-surface/40"
-                  disabled
+                  className="flex w-full cursor-pointer items-center px-3 py-2.5 text-left text-body-sm text-on-surface hover:bg-white/5"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onImportStatements();
+                  }}
                 >
                   Import statements
                 </button>
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full cursor-pointer items-center px-3 py-2.5 text-left text-body-sm text-on-surface hover:bg-white/5 disabled:cursor-default disabled:opacity-50"
-                  disabled={syncPending}
+                  className="flex w-full cursor-pointer items-center px-3 py-2.5 text-left text-body-sm text-on-surface hover:bg-white/5"
                   onClick={() => {
-                    void handleSyncTransfers();
+                    setMenuOpen(false);
+                    onSyncTransfers();
                   }}
                 >
-                  {syncPending ? "Syncing transfers…" : "Sync transfers"}
+                  Sync transfers
                 </button>
               </div>
             ) : null}
           </div>
         </div>
       </div>
-
-      {syncMessage ? (
-        <p className="mb-stack-sm text-body-sm text-on-surface/60" role="status">
-          {syncMessage}
-        </p>
-      ) : null}
 
       <TransactionFiltersBar
         filters={filters}
@@ -212,22 +181,6 @@ export function TransactionsSection({
               },
             }
           : {})}
-      />
-
-      <SyncTransfersReviewDialog
-        open={reviewOpen}
-        onOpenChange={(open) => {
-          setReviewOpen(open);
-          if (!open) setReviewPairs([]);
-        }}
-        pairs={reviewPairs}
-        accounts={accounts}
-        onReject={async (outIds) => {
-          await onRejectTransferPairs(outIds);
-          setReviewPairs((prev) =>
-            prev.filter((pair) => !outIds.includes(pair.outId)),
-          );
-        }}
       />
     </section>
   );

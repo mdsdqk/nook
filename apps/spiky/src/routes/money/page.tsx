@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { AccountsSection } from "@/components/money/accounts-section";
 import { CashFlowSection } from "@/components/money/cash-flow-section";
+import { ImportStatementWizard } from "@/components/money/import-statement-wizard";
 import { MoneyEmptyState } from "@/components/money/money-empty-state";
 import { MoneySkeletons } from "@/components/money/money-skeletons";
 import { SyncPendingBanner } from "@/components/money/sync-pending-banner";
+import { SyncTransfersWizard } from "@/components/money/sync-transfers-wizard";
 import { AccountFormDialog } from "@/components/money/account-form-dialog";
 import { TransactionsSection } from "@/components/money/transactions-section";
 import { useMoney } from "@/lib/money/use-money";
@@ -17,6 +19,8 @@ export function MoneyPage() {
     search: "",
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [transfersOpen, setTransfersOpen] = useState(false);
 
   const money = useMoney(filters);
 
@@ -37,6 +41,7 @@ export function MoneyPage() {
               syncPending={money.syncPending}
               syncError={money.syncError}
               onAddAccount={() => setCreateOpen(true)}
+              onImportStatement={() => setImportOpen(true)}
               onSync={() => {
                 void money.syncPendingStatements();
               }}
@@ -81,12 +86,28 @@ export function MoneyPage() {
               onCreate={money.createTransaction}
               onUpdate={(id, input) => money.updateTransaction(id, input)}
               onDelete={money.deleteTransaction}
-              onSyncTransfers={money.syncTransfers}
-              onRejectTransferPairs={money.rejectTransferPairs}
+              onImportStatements={() => setImportOpen(true)}
+              onSyncTransfers={() => setTransfersOpen(true)}
             />
           </>
         )}
       </main>
+
+      <ImportStatementWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImportFile={money.importStatementFile}
+        onSyncStatement={money.syncStatementById}
+        policy={money.importPolicy}
+      />
+
+      <SyncTransfersWizard
+        open={transfersOpen}
+        onOpenChange={setTransfersOpen}
+        accounts={money.accounts}
+        onSyncTransfers={money.syncTransfers}
+        onRejectTransferPairs={money.rejectTransferPairs}
+      />
     </>
   );
 }

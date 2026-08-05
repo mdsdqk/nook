@@ -10,6 +10,8 @@ type DialogProps = {
   description?: string;
   children: React.ReactNode;
   className?: string;
+  /** When false, ignore backdrop / Escape / X close. Default true. */
+  dismissible?: boolean;
 };
 
 export function Dialog({
@@ -19,10 +21,13 @@ export function Dialog({
   description,
   children,
   className,
+  dismissible = true,
 }: DialogProps) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
   const onOpenChangeRef = React.useRef(onOpenChange);
   onOpenChangeRef.current = onOpenChange;
+  const dismissibleRef = React.useRef(dismissible);
+  dismissibleRef.current = dismissible;
 
   React.useEffect(() => {
     const el = dialogRef.current;
@@ -54,6 +59,25 @@ export function Dialog({
     };
   }, [open]);
 
+  React.useEffect(() => {
+    const el = dialogRef.current;
+    if (!el || !open) return;
+
+    function onCancel(event: Event) {
+      if (!dismissibleRef.current) {
+        event.preventDefault();
+      }
+    }
+
+    el.addEventListener("cancel", onCancel);
+    return () => el.removeEventListener("cancel", onCancel);
+  }, [open]);
+
+  function requestClose() {
+    if (!dismissibleRef.current) return;
+    onOpenChangeRef.current(false);
+  }
+
   return (
     <dialog
       ref={dialogRef}
@@ -62,14 +86,25 @@ export function Dialog({
         className,
       )}
       onClose={() => {
-        // Avoid setState storms if Fast Refresh tears the dialog down.
+        if (!dismissibleRef.current) {
+          // Re-open if something forced a close while locked.
+          const el = dialogRef.current;
+          if (el && open && el.isConnected && !el.open) {
+            try {
+              el.showModal();
+            } catch {
+              // ignore
+            }
+          }
+          return;
+        }
         if (dialogRef.current?.isConnected) {
           onOpenChangeRef.current(false);
         }
       }}
       onClick={(event) => {
         if (event.target === dialogRef.current) {
-          onOpenChangeRef.current(false);
+          requestClose();
         }
       }}
     >
@@ -80,15 +115,19 @@ export function Dialog({
             <p className="mt-1 text-body-sm text-on-surface/60">{description}</p>
           ) : null}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Close"
-          onClick={() => onOpenChangeRef.current(false)}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {dismissible ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Close"
+            onClick={requestClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        ) : (
+          <span className="sr-only">Dialog is busy and cannot be closed</span>
+        )}
       </div>
       <div className="px-5 py-4">{children}</div>
     </dialog>

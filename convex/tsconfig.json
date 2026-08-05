@@ -8,7 +8,18 @@
     "noEmit": true,
     "types": ["node"],
     "paths": {
-      "@nook/domain": ["../packages/domain/src/index.ts"]
+      "@nook/domain": ["../packages/domain/src/index.ts"],
+      "@nook/pipeline": ["../packages/pipeline/src/index.ts"],
+      "@nook/pipeline/parse-file": ["../packages/pipeline/src/parse-file.ts"],
+      "@nook/persistence": ["../packages/persistence/src/index.ts"],
+      "@nook/persistence/convex-writer": ["../packages/persistence/src/convex-writer.ts"],
+      "@nook/contracts": ["../packages/contracts/src/index.ts"],
+      "@nook/shared": ["../packages/shared/src/index.ts"],
+      "@nook/readers": ["../packages/readers/src/index.ts"],
+      "@nook/detectors": ["../packages/detectors/src/index.ts"],
+      "@nook/parsers": ["../packages/parsers/src/index.ts"],
+      "@nook/normalizers": ["../packages/normalizers/src/index.ts"],
+      "@nook/validators": ["../packages/validators/src/index.ts"]
     }
   },
   "include": ["./**/*"],

@@ -29,6 +29,7 @@ type SyncStatementResult = {
   assertionsUpserted: number;
   transactionsUpserted: number;
   transactionsSkipped: number;
+  accountCreated: boolean;
 };
 
 export async function syncStatementToLedger(
@@ -45,7 +46,9 @@ export async function syncStatementToLedger(
     )
     .first();
 
+  let accountCreated = false;
   if (!account) {
+    accountCreated = true;
     const accountId = await ctx.db.insert("accounts", {
       userId: args.userId,
       name: `${args.bank} ${args.accountNumberMasked}`,
@@ -56,6 +59,26 @@ export async function syncStatementToLedger(
       currency: args.currency,
     });
     account = (await ctx.db.get(accountId))!;
+
+    // TOCTOU: concurrent inserts may create duplicates — keep oldest.
+    const peers = await ctx.db
+      .query("accounts")
+      .withIndex("by_fingerprint", (q) =>
+        q
+          .eq("userId", args.userId)
+          .eq("institution", args.bank)
+          .eq("accountFingerprint", args.accountFingerprint),
+      )
+      .collect();
+    if (peers.length > 1) {
+      peers.sort((a, b) => a._creationTime - b._creationTime);
+      const keeper = peers[0]!;
+      for (const peer of peers.slice(1)) {
+        await ctx.db.delete(peer._id);
+      }
+      account = keeper;
+      accountCreated = peers[0]!._id === accountId;
+    }
   } else if (account.type === "asset.bank") {
     await ctx.db.patch(account._id, { type: "asset.bank.savings" });
     account = (await ctx.db.get(account._id))!;
@@ -163,8 +186,17 @@ export async function syncStatementToLedger(
     assertionsUpserted,
     transactionsUpserted,
     transactionsSkipped,
+    accountCreated,
   };
 }
+
+const syncResultValidator = v.object({
+  accountId: v.id("accounts"),
+  assertionsUpserted: v.number(),
+  transactionsUpserted: v.number(),
+  transactionsSkipped: v.number(),
+  accountCreated: v.boolean(),
+});
 
 export const syncFromStatement = mutation({
   args: {
@@ -187,12 +219,7 @@ export const syncFromStatement = mutation({
       }),
     ),
   },
-  returns: v.object({
-    accountId: v.id("accounts"),
-    assertionsUpserted: v.number(),
-    transactionsUpserted: v.number(),
-    transactionsSkipped: v.number(),
-  }),
+  returns: syncResultValidator,
   handler: async (ctx, args) => {
     const user = await getAppUser(ctx);
     const statement = await ctx.db.get(args.statementId);
@@ -202,6 +229,50 @@ export const syncFromStatement = mutation({
     return await syncStatementToLedger(ctx, {
       ...args,
       userId: user._id,
+    });
+  },
+});
+
+export const syncFromStatementId = mutation({
+  args: {
+    statementId: v.id("parsedStatements"),
+  },
+  returns: syncResultValidator,
+  handler: async (ctx, args) => {
+    const user = await getAppUser(ctx);
+    const statement = await ctx.db.get(args.statementId);
+    if (!statement || statement.userId !== user._id) {
+      throw new Error("Statement not found");
+    }
+    if (statement.validationPassed === false) {
+      throw new Error("Cannot sync a statement that failed validation");
+    }
+
+    const parsedTxns = await ctx.db
+      .query("parsedTransactions")
+      .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
+      .collect();
+
+    parsedTxns.sort((a, b) => a.sequence - b.sequence);
+
+    return await syncStatementToLedger(ctx, {
+      userId: user._id,
+      statementId: statement._id,
+      bank: statement.bank,
+      accountFingerprint: statement.accountFingerprint,
+      accountNumberMasked: statement.accountNumberMasked,
+      currency: statement.currency,
+      periodStart: statement.periodStart,
+      periodEnd: statement.periodEnd,
+      openingBalance: statement.openingBalance,
+      closingBalance: statement.closingBalance,
+      transactions: parsedTxns.map((txn) => ({
+        date: txn.date,
+        narration: txn.narration,
+        ...(txn.debit !== undefined ? { debit: txn.debit } : {}),
+        ...(txn.credit !== undefined ? { credit: txn.credit } : {}),
+        externalKey: txn.externalKey,
+      })),
     });
   },
 });
@@ -227,6 +298,8 @@ export const listUnsynced = query({
 
     const unsynced = [];
     for (const statement of statements) {
+      if (statement.validationPassed === false) continue;
+
       const ledgerRow = await ctx.db
         .query("transactions")
         .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
@@ -265,6 +338,8 @@ export const syncPendingForUser = mutation({
     const accountsTouched = new Set<string>();
 
     for (const statement of statements) {
+      if (statement.validationPassed === false) continue;
+
       const ledgerRow = await ctx.db
         .query("transactions")
         .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
