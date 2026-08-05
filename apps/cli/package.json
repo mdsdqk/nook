@@ -6,12 +6,15 @@
   "main": "./src/index.ts",
   "bin": {
     "statement": "./src/index.ts",
-    "wealth": "./src/wealth.ts"
+    "wealth": "./src/wealth.ts",
+    "nook": "./src/nook.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
+    "build:bundle": "bun run scripts/bundle.ts",
+    "publish:npm": "bun run build:bundle && cd dist && npm publish --access public",
     "test": "bun test src"
   },
   "dependencies": {

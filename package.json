@@ -13,6 +13,8 @@
     "clean": "turbo run clean",
     "statement": "bun run apps/cli/src/index.ts",
     "wealth": "bun run apps/cli/src/wealth.ts",
+    "build:cli": "bun run --filter @nook/cli build:bundle",
+    "publish:cli": "bun run --filter @nook/cli publish:npm",
     "test": "turbo run test"
   },
   "devDependencies": {
