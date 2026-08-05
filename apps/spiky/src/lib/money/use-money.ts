@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import type { AccountType, TransactionDirection, TransactionType } from "@nook/domain";
 import { api } from "@nook/convex/_generated/api";
 import type { Id } from "@nook/convex/_generated/dataModel";
 import { useAuth } from "@/lib/auth";
 import { filterTransactions } from "./filters";
+import type {
+  StatementImportResult,
+  StatementSyncResult,
+  ImportPolicy,
+} from "./statement-import";
+import { DEFAULT_IMPORT_POLICY } from "./statement-import";
 import type {
   AccountInput,
   CashFlowPoint,
@@ -147,6 +153,22 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
   const updateTxnMut = useMutation(api.transactions.update);
   const removeTxnMut = useMutation(api.transactions.remove);
   const syncPendingMut = useMutation(api.ledgerSync.syncPendingForUser);
+  const syncFromStatementIdMut = useMutation(
+    api.ledgerSync.syncFromStatementId,
+  );
+  const generateUploadUrlMut = useMutation(
+    api.statementUpload.generateUploadUrl,
+  );
+  const claimStatementUploadMut = useMutation(
+    api.statementUpload.claimStatementUpload,
+  );
+  const importUploadedStatementAction = useAction(
+    api.statementImportActions.importUploadedStatement,
+  );
+  const importPolicyQuery = useQuery(
+    api.importLimitOverrides.getMyImportPolicy,
+    isAuthenticated ? {} : "skip",
+  );
   const syncTransfersMut = useMutation(api.transferSync.syncTransfers);
   const rejectTransferPairsMut = useMutation(
     api.transferSync.rejectTransferPairs,
@@ -350,6 +372,98 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
     }
   }, [isAuthenticated, syncPendingMut]);
 
+  const importStatementFile = useCallback(
+    async (file: File): Promise<StatementImportResult> => {
+      if (!isAuthenticated) throw new Error("Not authenticated");
+
+      const uploadUrl = await generateUploadUrlMut({});
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type || "application/pdf" },
+        body: file,
+      });
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed (${uploadResponse.status})`);
+      }
+      const { storageId } = (await uploadResponse.json()) as {
+        storageId: Id<"_storage">;
+      };
+
+      await claimStatementUploadMut({
+        storageId,
+        filename: file.name,
+        byteSize: file.size,
+      });
+
+      const result = await importUploadedStatementAction({
+        storageId,
+      });
+
+      const mapped: StatementImportResult = {
+        ok: result.ok,
+        accountExists: result.accountExists,
+      };
+      if (result.errors !== undefined) mapped.errors = result.errors;
+      if (result.statementId !== undefined) {
+        mapped.statementId = result.statementId;
+      }
+      if (
+        result.action === "created" ||
+        result.action === "replaced" ||
+        result.action === "no-op"
+      ) {
+        mapped.action = result.action;
+      }
+      if (result.bank !== undefined) mapped.bank = result.bank;
+      if (result.accountNumberMasked !== undefined) {
+        mapped.accountNumberMasked = result.accountNumberMasked;
+      }
+      if (result.periodStart !== undefined) {
+        mapped.periodStart = result.periodStart;
+      }
+      if (result.periodEnd !== undefined) mapped.periodEnd = result.periodEnd;
+      if (result.transactionCount !== undefined) {
+        mapped.transactionCount = result.transactionCount;
+      }
+      if (result.openingBalance !== undefined) {
+        mapped.openingBalance = result.openingBalance;
+      }
+      if (result.closingBalance !== undefined) {
+        mapped.closingBalance = result.closingBalance;
+      }
+      if (result.currency !== undefined) mapped.currency = result.currency;
+      if (result.validationPassed !== undefined) {
+        mapped.validationPassed = result.validationPassed;
+      }
+      if (result.filename !== undefined) mapped.filename = result.filename;
+      return mapped;
+    },
+    [
+      isAuthenticated,
+      generateUploadUrlMut,
+      claimStatementUploadMut,
+      importUploadedStatementAction,
+    ],
+  );
+
+  const syncStatementById = useCallback(
+    async (statementId: string): Promise<StatementSyncResult> => {
+      if (!isAuthenticated) throw new Error("Not authenticated");
+      const result = await syncFromStatementIdMut({
+        statementId: statementId as Id<"parsedStatements">,
+      });
+      return {
+        statementId,
+        accountId: result.accountId,
+        assertionsUpserted: result.assertionsUpserted,
+        transactionsUpserted: result.transactionsUpserted,
+        transactionsSkipped: result.transactionsSkipped,
+        accountCreated: result.accountCreated,
+      };
+    },
+    [isAuthenticated, syncFromStatementIdMut],
+  );
+
   const syncTransfers = useCallback(async (): Promise<SyncedTransferPair[]> => {
     if (!isAuthenticated) throw new Error("Not authenticated");
     const result = await syncTransfersMut({});
@@ -384,6 +498,10 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
     [isAuthenticated, rejectTransferPairsMut],
   );
 
+  const importPolicy: ImportPolicy = importPolicyQuery ?? {
+    ...DEFAULT_IMPORT_POLICY,
+  };
+
   return {
     accounts,
     transactions,
@@ -397,6 +515,7 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
     unsyncedStatements,
     syncPending,
     syncError,
+    importPolicy,
     createAccount,
     updateAccount,
     deleteAccount,
@@ -404,6 +523,8 @@ export function useMoney(filters: TransactionFilters = defaultFilters) {
     updateTransaction,
     deleteTransaction,
     syncPendingStatements,
+    importStatementFile,
+    syncStatementById,
     syncTransfers,
     rejectTransferPairs,
   };

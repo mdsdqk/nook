@@ -1,20 +1,18 @@
-import type { ParseResult, ParseError } from "@nook/contracts";
+import type { ParseResult, ParseError, ParsedDocument } from "@nook/contracts";
 import { ErrorCode } from "@nook/contracts";
-import { computeFileHash } from "@nook/shared";
+import { computeBytesHash } from "@nook/shared";
 import { PdfReader } from "@nook/readers";
 import { BankDetector } from "@nook/detectors";
 import { getParser } from "@nook/parsers";
 import { StatementNormalizer } from "@nook/normalizers";
 import { StatementValidator } from "@nook/validators";
 import { extname } from "node:path";
+import { readFile } from "node:fs/promises";
 
 export async function parseFile(path: string): Promise<ParseResult> {
-  const errors: ParseError[] = [];
-
-  // Source info
-  let contentHash: string;
+  let bytes: Uint8Array;
   try {
-    contentHash = await computeFileHash(path);
+    bytes = new Uint8Array(await readFile(path));
   } catch (err) {
     return {
       source: { path, contentHash: "", format: "" },
@@ -30,14 +28,22 @@ export async function parseFile(path: string): Promise<ParseResult> {
     };
   }
 
-  const format = extname(path).replace(".", "").toLowerCase();
-  const source = { path, contentHash, format };
+  return parseBytes(bytes, path);
+}
 
-  // Read
+export async function parseBytes(
+  bytes: Uint8Array,
+  filename: string,
+): Promise<ParseResult> {
+  const errors: ParseError[] = [];
+  const contentHash = computeBytesHash(bytes);
+  const format = extname(filename).replace(".", "").toLowerCase() || "pdf";
+  const source = { path: filename, contentHash, format };
+
   const reader = new PdfReader();
-  let doc;
+  let doc: ParsedDocument;
   try {
-    doc = await reader.read(path);
+    doc = await reader.readBytes(bytes);
   } catch (err) {
     return {
       source,
@@ -53,7 +59,14 @@ export async function parseFile(path: string): Promise<ParseResult> {
     };
   }
 
-  // Detect
+  return parseDocument(doc, source, errors);
+}
+
+async function parseDocument(
+  doc: ParsedDocument,
+  source: ParseResult["source"],
+  errors: ParseError[],
+): Promise<ParseResult> {
   const detector = new BankDetector();
   const detection = detector.detect(doc);
   if (!detection) {
@@ -71,7 +84,6 @@ export async function parseFile(path: string): Promise<ParseResult> {
     };
   }
 
-  // Parse
   const parser = getParser(detection);
   if (!parser) {
     return {
@@ -106,11 +118,9 @@ export async function parseFile(path: string): Promise<ParseResult> {
     };
   }
 
-  // Normalize
   const normalizer = new StatementNormalizer();
   statement = normalizer.normalize(statement);
 
-  // Validate
   const validator = new StatementValidator();
   const validation = validator.validate(statement);
 

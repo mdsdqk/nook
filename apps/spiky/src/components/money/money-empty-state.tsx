@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Wallet } from "lucide-react";
+import { Plus, RefreshCw, Upload, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type MoneyEmptyStateProps = {
@@ -8,6 +8,7 @@ type MoneyEmptyStateProps = {
   syncError: string | null;
   onAddAccount: () => void;
   onSync: () => void;
+  onImportStatement: () => void;
 };
 
 export function MoneyEmptyState({
@@ -17,6 +18,7 @@ export function MoneyEmptyState({
   syncError,
   onAddAccount,
   onSync,
+  onImportStatement,
 }: MoneyEmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
@@ -33,8 +35,8 @@ export function MoneyEmptyState({
             You have {unsyncedCount} imported statement
             {unsyncedCount === 1 ? "" : "s"} that{" "}
             {unsyncedCount === 1 ? "has" : "have"} not been synced to your
-            ledger yet. Sync to create accounts and transactions, or add an
-            account manually.
+            ledger yet. Sync to create accounts and transactions, import another
+            statement, or add an account manually.
           </p>
           {syncError ? (
             <p className="mt-3 text-body-sm text-error">{syncError}</p>
@@ -51,6 +53,14 @@ export function MoneyEmptyState({
               />
               {syncPending ? "Syncing…" : "Sync to ledger"}
             </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onImportStatement}
+            >
+              <Upload className="h-4 w-4" aria-hidden />
+              Import statement
+            </Button>
             <Button type="button" variant="secondary" onClick={onAddAccount}>
               <Plus className="h-4 w-4" aria-hidden />
               Add account
@@ -63,11 +73,15 @@ export function MoneyEmptyState({
             No accounts yet
           </h2>
           <p className="mt-2 max-w-md text-body-sm text-on-surface/60">
-            Add your first account to start tracking balances, cash flow, and
-            transactions in Money.
+            Import a bank statement or add your first account to start tracking
+            balances, cash flow, and transactions in Money.
           </p>
-          <div className="mt-6">
-            <Button type="button" onClick={onAddAccount}>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button type="button" onClick={onImportStatement}>
+              <Upload className="h-4 w-4" aria-hidden />
+              Import statement
+            </Button>
+            <Button type="button" variant="secondary" onClick={onAddAccount}>
               <Plus className="h-4 w-4" aria-hidden />
               Add account
             </Button>

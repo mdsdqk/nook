@@ -5,7 +5,11 @@ import type { Reader, ParsedDocument, DocumentPage, TextLine, TextSpan } from "@
 export class PdfReader implements Reader {
   async read(path: string): Promise<ParsedDocument> {
     const bytes = await readFile(path);
-    const pdf = await PDF.load(new Uint8Array(bytes));
+    return this.readBytes(new Uint8Array(bytes));
+  }
+
+  async readBytes(bytes: Uint8Array): Promise<ParsedDocument> {
+    const pdf = await PDF.load(bytes);
     const pages: DocumentPage[] = [];
 
     for (const page of pdf.getPages()) {
