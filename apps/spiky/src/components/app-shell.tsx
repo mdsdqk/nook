@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   LayoutDashboard,
   Wallet,
@@ -12,6 +13,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { Chip } from "@/components/ui/chip";
+import { easeOutFast, fadeIn, scaleIn } from "@/lib/motion";
 
 type NavItem = {
   label: string;
@@ -21,7 +24,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+  { label: "Dashboard", icon: LayoutDashboard },
   { label: "Money", to: "/money", icon: Wallet },
   { label: "Wealth", icon: PieChart },
   { label: "Debt", icon: CreditCard },
@@ -38,6 +41,8 @@ function initials(name: string) {
 export function AppShell() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const reduceMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -90,18 +95,36 @@ export function AppShell() {
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3" aria-label="Main">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const badge = item.badge ? (
-              <span
-                className={cn(
-                  "ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium",
-                  item.to
-                    ? "bg-primary/20 text-primary"
-                    : "bg-primary/10 text-primary/60",
-                )}
-              >
-                {item.badge}
+            const trailing = (
+              <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                {item.badge ? (
+                  <span
+                    className={cn(
+                      "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                      item.to
+                        ? "bg-primary/20 text-primary"
+                        : "bg-primary/10 text-primary/60",
+                    )}
+                  >
+                    {item.badge}
+                  </span>
+                ) : null}
+                {!item.to ? (
+                  <motion.span
+                    initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={easeOutFast}
+                  >
+                    <Chip
+                      variant="outline"
+                      className="px-1.5 py-0.5 text-[10px] text-on-surface/40"
+                    >
+                      Coming soon
+                    </Chip>
+                  </motion.span>
+                ) : null}
               </span>
-            ) : null;
+            );
 
             if (item.to) {
               return (
@@ -119,7 +142,7 @@ export function AppShell() {
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden />
                   <span>{item.label}</span>
-                  {badge}
+                  {trailing}
                 </NavLink>
               );
             }
@@ -132,21 +155,27 @@ export function AppShell() {
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden />
                 <span>{item.label}</span>
-                {badge}
+                {trailing}
               </span>
             );
           })}
         </nav>
 
         <div className="mt-auto shrink-0 border-t border-white/5 px-3 py-3">
-          <button
-            type="button"
-            className="mb-1 flex w-full cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-body-sm text-on-surface/70"
-            disabled
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              cn(
+                "mb-1 flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-body-sm transition-colors",
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-on-surface/70 hover:bg-white/5 hover:text-on-surface",
+              )
+            }
           >
             <Settings className="h-4 w-4 shrink-0" aria-hidden />
             Settings
-          </button>
+          </NavLink>
 
           <div className="relative" ref={menuRef}>
             <button
@@ -170,29 +199,48 @@ export function AppShell() {
               </span>
             </button>
 
-            {menuOpen ? (
-              <div
-                id={menuId}
-                role="menu"
-                className="glass-float absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-md"
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-body-sm text-on-surface hover:bg-white/5"
-                  onClick={handleLogout}
+            <AnimatePresence>
+              {menuOpen ? (
+                <motion.div
+                  id={menuId}
+                  role="menu"
+                  className="glass-float absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-md"
+                  variants={scaleIn}
+                  initial={reduceMotion ? false : "initial"}
+                  animate="animate"
+                  exit="exit"
+                  transition={easeOutFast}
                 >
-                  <LogOut className="h-4 w-4" aria-hidden />
-                  Log out
-                </button>
-              </div>
-            ) : null}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-body-sm text-on-surface hover:bg-white/5"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden />
+                    Log out
+                  </button>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
           </div>
         </div>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <Outlet />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+            variants={fadeIn}
+            initial={reduceMotion ? false : "initial"}
+            animate="animate"
+            exit="exit"
+            transition={easeOutFast}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

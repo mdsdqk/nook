@@ -212,24 +212,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!value) {
         throw new Error("Enter a username or email");
       }
-      beginHandoff();
-      try {
-        const result = looksLikeEmail(value)
-          ? await authClient.signIn.email({ email: value, password })
-          : await authClient.signIn.username({
-              username: value.toLowerCase(),
-              password,
-            });
-        if (result.error) {
-          throw new Error(result.error.message ?? "Could not sign in");
-        }
-        // App user linking runs in the effect once useConvexAuth is ready.
-      } catch (err) {
-        endHandoff();
-        throw err;
+      // Don't beginHandoff here — keep the login form's in-button pending state
+      // during the network round-trip. waitingForAppUser covers post-auth linking.
+      const result = looksLikeEmail(value)
+        ? await authClient.signIn.email({ email: value, password })
+        : await authClient.signIn.username({
+            username: value.toLowerCase(),
+            password,
+          });
+      if (result.error) {
+        throw new Error(result.error.message ?? "Could not sign in");
       }
     },
-    [beginHandoff, endHandoff],
+    [],
   );
 
   const signUpWithUsername = useCallback(
@@ -247,24 +242,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!email) {
         throw new Error("Email is required");
       }
-      beginHandoff();
-      try {
-        const result = await authClient.signUp.email({
-          email,
-          password: args.password,
-          username,
-          name: args.name?.trim() || username,
-        });
-        if (result.error) {
-          throw new Error(result.error.message ?? "Could not sign up");
-        }
-        // App user linking runs in the effect once useConvexAuth is ready.
-      } catch (err) {
-        endHandoff();
-        throw err;
+      const result = await authClient.signUp.email({
+        email,
+        password: args.password,
+        username,
+        name: args.name?.trim() || username,
+      });
+      if (result.error) {
+        throw new Error(result.error.message ?? "Could not sign up");
       }
     },
-    [beginHandoff, endHandoff],
+    [],
   );
 
   const logout = useCallback(async () => {
@@ -274,16 +262,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Stay in loading until Convex JWT is ready and the app user is linked.
   // authHandoff covers the Google redirect gap before BA session exists.
+  // Do NOT block on providers — login form renders immediately; Google button
+  // appears when providersReady (skeleton slot meanwhile).
   const waitingForAppUser =
     hasBetterAuthSession && session === null && !ensureError;
-
-  // Hold the login form until we know whether Google is enabled (avoids layout shift).
-  const waitingForProviders = !providersReady && !hasBetterAuthSession;
 
   const isLoading =
     waitingOnSession ||
     authHandoff ||
-    waitingForProviders ||
     (hasBetterAuthSession && convexAuthLoading) ||
     waitingForAppUser;
 
