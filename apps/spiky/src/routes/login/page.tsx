@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { RedirectIfAuthed } from "@/components/require-auth";
 import { sanitizeAppPath } from "@/lib/safe-path";
+import { easeOutSoft, fadeUp } from "@/lib/motion";
 
 export function LoginPage() {
   return (
@@ -19,6 +21,7 @@ function LoginForm() {
     signInWithIdentifier,
     signUpWithUsername,
     googleEnabled,
+    providersReady,
     ensureError,
     retryEnsureUser,
     logout,
@@ -31,6 +34,7 @@ function LoginForm() {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const redirectTo = sanitizeAppPath(
     new URLSearchParams(window.location.search).get("redirect"),
@@ -40,10 +44,10 @@ function LoginForm() {
   const title = mode === "signin" ? "Sign in" : "Sign up";
   const subtitle =
     mode === "signin"
-      ? googleEnabled
+      ? !providersReady || googleEnabled
         ? "Continue with Google, or use your username or email."
         : "Sign in with your username or email."
-      : googleEnabled
+      : !providersReady || googleEnabled
         ? "Create a Nook account with Google, or with a username and email."
         : "Create a Nook account with a username and email.";
 
@@ -106,7 +110,13 @@ function LoginForm() {
         className="pointer-events-none absolute bottom-0 right-0 h-[280px] w-[360px] rounded-full bg-tertiary/10 blur-[100px]"
       />
 
-      <div className="relative w-full max-w-sm">
+      <motion.div
+        className="relative w-full max-w-sm"
+        variants={fadeUp}
+        initial={reduceMotion ? false : "initial"}
+        animate="animate"
+        transition={easeOutSoft}
+      >
         <div className="mb-stack-md flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-container text-title-md font-semibold text-white">
             N
@@ -146,7 +156,21 @@ function LoginForm() {
         ) : null}
 
         <div className="mt-stack-md flex flex-col gap-3">
-          {googleEnabled ? (
+          {!providersReady ? (
+            <>
+              <div
+                aria-hidden
+                className="h-10 w-full animate-pulse rounded-md bg-white/5"
+              />
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-label-caps text-on-surface-variant">
+                  or
+                </span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+            </>
+          ) : googleEnabled ? (
             <>
               <Button type="button" onClick={onGoogle} disabled={pending}>
                 Continue with Google
@@ -252,11 +276,21 @@ function LoginForm() {
               />
             </label>
 
-            {error ? (
-              <p className="text-body-sm text-error" role="alert">
-                {error}
-              </p>
-            ) : null}
+            <AnimatePresence mode="wait" initial={false}>
+              {error ? (
+                <motion.p
+                  key={error}
+                  className="text-body-sm text-error"
+                  role="alert"
+                  initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {error}
+                </motion.p>
+              ) : null}
+            </AnimatePresence>
 
             <Button type="submit" disabled={pending || !canSubmit}>
               {pending
@@ -283,7 +317,7 @@ function LoginForm() {
               : "Already have an account? Sign in"}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

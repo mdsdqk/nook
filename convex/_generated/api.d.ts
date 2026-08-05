@@ -22,6 +22,7 @@ import type * as lib_balances from "../lib/balances.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_holdings from "../lib/holdings.js";
 import type * as lib_ownership from "../lib/ownership.js";
+import type * as lib_profile from "../lib/profile.js";
 import type * as lib_transferLinks from "../lib/transferLinks.js";
 import type * as lib_transferMatch from "../lib/transferMatch.js";
 import type * as lib_trustedOrigins from "../lib/trustedOrigins.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   "lib/dates": typeof lib_dates;
   "lib/holdings": typeof lib_holdings;
   "lib/ownership": typeof lib_ownership;
+  "lib/profile": typeof lib_profile;
   "lib/transferLinks": typeof lib_transferLinks;
   "lib/transferMatch": typeof lib_transferMatch;
   "lib/trustedOrigins": typeof lib_trustedOrigins;

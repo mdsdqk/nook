@@ -5,6 +5,7 @@ import {
   ConvexBetterAuthProvider,
   type AuthClient,
 } from "@convex-dev/better-auth/react";
+import { MotionConfig } from "motion/react";
 import { authClient } from "./lib/auth-client";
 import { AuthProvider } from "./lib/auth";
 import { App } from "./App";
@@ -21,13 +22,15 @@ const convex = new ConvexReactClient(url);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ConvexBetterAuthProvider
-      client={convex}
-      authClient={authClient as unknown as AuthClient}
-    >
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </ConvexBetterAuthProvider>
+    <MotionConfig reducedMotion="user">
+      <ConvexBetterAuthProvider
+        client={convex}
+        authClient={authClient as unknown as AuthClient}
+      >
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ConvexBetterAuthProvider>
+    </MotionConfig>
   </StrictMode>,
 );

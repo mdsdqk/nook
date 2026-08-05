@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { sanitizeAppPath } from "@/lib/safe-path";
+import { AuthBusy } from "@/components/auth-busy";
 
 export function RequireAuth() {
   const {
@@ -10,24 +11,16 @@ export function RequireAuth() {
     ensureError,
     retryEnsureUser,
     logout,
-    cancelAuthHandoff,
   } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
-        <p className="text-body-sm text-on-surface/60">Loading…</p>
-        <button
-          type="button"
-          className="text-body-sm text-on-surface/50 underline-offset-2 hover:underline"
-          onClick={() => {
-            cancelAuthHandoff();
-          }}
-        >
-          Cancel
-        </button>
-      </div>
+      <AuthBusy
+        onSignOut={() => {
+          void logout();
+        }}
+      />
     );
   }
 
@@ -65,22 +58,15 @@ export function RequireAuth() {
 }
 
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading, cancelAuthHandoff } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center">
-        <p className="text-body-sm text-on-surface/60">Loading…</p>
-        <button
-          type="button"
-          className="text-body-sm text-on-surface/50 underline-offset-2 hover:underline"
-          onClick={() => {
-            cancelAuthHandoff();
-          }}
-        >
-          Cancel
-        </button>
-      </div>
+      <AuthBusy
+        onSignOut={() => {
+          void logout();
+        }}
+      />
     );
   }
 
@@ -96,12 +82,15 @@ export function RedirectIfAuthed({ children }: { children: ReactNode }) {
 }
 
 export function AuthRedirect() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-body-sm text-on-surface/60">
-        Loading…
-      </div>
+      <AuthBusy
+        message="Loading…"
+        onSignOut={() => {
+          void logout();
+        }}
+      />
     );
   }
   return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
