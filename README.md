@@ -42,3 +42,12 @@ Run all dev tasks through turbo:
 ```sh
 bun run dev
 ```
+
+## Deploy
+
+Production hosting (Vercel for `apps/web` + `apps/spiky`, Convex backend, npm CLI `nook`) is documented in [docs/tech/deploy.md](docs/tech/deploy.md).
+
+```sh
+bun run deploy:convex
+bun run build:cli
+```

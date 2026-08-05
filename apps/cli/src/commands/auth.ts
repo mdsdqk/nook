@@ -16,79 +16,95 @@ import {
 } from "../lib/auth-callback";
 import { printFail, printInfo, printSuccess } from "./shared";
 
+/** Injected at bundle time for the published npm package; unset in monorepo runs. */
+declare const __NOOK_DEFAULT_SPIKY_URL__: string | undefined;
+
+const PACKAGED_SPIKY_URL =
+  typeof __NOOK_DEFAULT_SPIKY_URL__ !== "undefined"
+    ? __NOOK_DEFAULT_SPIKY_URL__
+    : undefined;
+
 const DEFAULT_SPIKY_URL =
-  process.env["NOOK_SPIKY_URL"] ?? "http://localhost:5174";
+  process.env["NOOK_SPIKY_URL"] ??
+  PACKAGED_SPIKY_URL ??
+  "http://localhost:5174";
 const EXTRA_ALLOWED_ORIGINS = process.env["NOOK_SPIKY_ALLOWED_ORIGINS"];
 const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
 
-export const authCommand = new Command("auth").description(
-  "Authenticate the CLI with Better Auth via Spiky",
-);
+export function createAuthCommand(): Command {
+  const auth = new Command("auth").description(
+    "Authenticate the CLI with Better Auth via Spiky",
+  );
 
-authCommand
-  .command("login")
-  .description("Open Spiky in a browser and store a CLI session")
-  .option("--spiky-url <url>", "Spiky origin", DEFAULT_SPIKY_URL)
-  .option(
-    "--timeout-ms <ms>",
-    "How long to wait for browser callback",
-    String(LOGIN_TIMEOUT_MS),
-  )
-  .action(async (opts: { spikyUrl: string; timeoutMs: string }) => {
-    try {
-      const timeoutMs = Number(opts.timeoutMs);
-      if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-        throw new Error("Invalid --timeout-ms");
+  auth
+    .command("login")
+    .description("Open Spiky in a browser and store a CLI session")
+    .option("--spiky-url <url>", "Spiky origin", DEFAULT_SPIKY_URL)
+    .option(
+      "--timeout-ms <ms>",
+      "How long to wait for browser callback",
+      String(LOGIN_TIMEOUT_MS),
+    )
+    .action(async (opts: { spikyUrl: string; timeoutMs: string }) => {
+      try {
+        const timeoutMs = Number(opts.timeoutMs);
+        if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+          throw new Error("Invalid --timeout-ms");
+        }
+        const credentials = await runBrowserLogin(opts.spikyUrl, timeoutMs);
+        await writeCredentials(credentials);
+        printSuccess(`Logged in. Credentials saved to ${credentialsPath()}`);
+        printInfo(`Convex: ${credentials.convexUrl}`);
+      } catch (err) {
+        printFail(err instanceof Error ? err.message : String(err));
+        process.exit(1);
       }
-      const credentials = await runBrowserLogin(opts.spikyUrl, timeoutMs);
-      await writeCredentials(credentials);
-      printSuccess(`Logged in. Credentials saved to ${credentialsPath()}`);
-      printInfo(`Convex: ${credentials.convexUrl}`);
-    } catch (err) {
-      printFail(err instanceof Error ? err.message : String(err));
-      process.exit(1);
-    }
-  });
+    });
 
-authCommand
-  .command("logout")
-  .description("Remove stored CLI credentials")
-  .action(async () => {
-    await clearCredentials();
-    printSuccess("Logged out");
-  });
+  auth
+    .command("logout")
+    .description("Remove stored CLI credentials")
+    .action(async () => {
+      await clearCredentials();
+      printSuccess("Logged out");
+    });
 
-authCommand
-  .command("status")
-  .description("Show CLI auth status")
-  .action(async () => {
-    const credentials = await readCredentials();
-    if (!credentials) {
-      printInfo("Not logged in");
-      return;
-    }
-
-    try {
-      const { client } = await createAuthedConvexClient();
-      const me = await client.query(
-        (await import("@nook/convex/_generated/api")).api.users.me,
-        {},
-      );
-      if (!me) {
-        printFail(
-          "Session present but app user not found. Try logging in again.",
-        );
+  auth
+    .command("status")
+    .description("Show CLI auth status")
+    .action(async () => {
+      const credentials = await readCredentials();
+      if (!credentials) {
+        printInfo("Not logged in");
         return;
       }
-      printSuccess(`Logged in as ${me.email} (${me.name})`);
-      printInfo(`Convex: ${credentials.convexUrl}`);
-      printInfo(`Obtained: ${credentials.obtainedAt}`);
-    } catch (err) {
-      printFail(err instanceof Error ? err.message : String(err));
-      process.exit(1);
-    }
-  });
 
+      try {
+        const { client } = await createAuthedConvexClient();
+        const me = await client.query(
+          (await import("@nook/convex/_generated/api")).api.users.me,
+          {},
+        );
+        if (!me) {
+          printFail(
+            "Session present but app user not found. Try logging in again.",
+          );
+          return;
+        }
+        printSuccess(`Logged in as ${me.email} (${me.name})`);
+        printInfo(`Convex: ${credentials.convexUrl}`);
+        printInfo(`Obtained: ${credentials.obtainedAt}`);
+      } catch (err) {
+        printFail(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    });
+
+  return auth;
+}
+
+/** Single-program entrypoints (statement / wealth) share one instance. */
+export const authCommand = createAuthCommand();
 async function runBrowserLogin(
   spikyUrl: string,
   timeoutMs: number,

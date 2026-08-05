@@ -34,6 +34,7 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 - Convex is needed for Spiky auth/data and the CLI's `--convex` / `--sync-ledger` paths. Prefer a normal cloud/dev deployment for Google OAuth. Anonymous agent mode: `cd convex && CONVEX_AGENT_MODE=anonymous bunx convex dev` (email/password can work; Google redirect needs `.convex.site`).
 - The CLI reads `CONVEX_URL` from the process env (or from saved credentials) and does **not** auto-load `convex/.env.local`; export `CONVEX_URL` before running CLI Convex commands if it differs from the credential file.
 - `convex dev` may print a benign `Filesystem changed during push, retrying...` loop; functions still become ready and mutations succeed. It also creates an untracked boilerplate `convex/README.md` — do not commit it.
+- **Production deploy:** see [docs/tech/deploy.md](docs/tech/deploy.md). `SITE_URL` must be the **Spiky** origin (`https://spiky.nook.com` or the Vercel Spiky URL). Root script: `bun run deploy:convex`. Vercel: two projects (`apps/web` → primary hostname, `apps/spiky` → playground). Published CLI: `bunx nook` / `npx nook` (`bun run build:cli` / `bun run publish:cli`).
 
 ### Known pre-existing issues on `main` (not environment problems)
 - One `packages/validators` test fails (`StatementValidator > fails when no transactions`).
