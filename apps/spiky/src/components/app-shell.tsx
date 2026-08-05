@@ -95,12 +95,14 @@ export function AppShell() {
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3" aria-label="Main">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const trailing = (
-              <span className="ml-auto flex shrink-0 items-center gap-1.5">
+            const label = (
+              <span className="flex min-w-0 items-center gap-3">
+                <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="truncate">{item.label}</span>
                 {item.badge ? (
                   <span
                     className={cn(
-                      "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                      "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
                       item.to
                         ? "bg-primary/20 text-primary"
                         : "bg-primary/10 text-primary/60",
@@ -109,22 +111,23 @@ export function AppShell() {
                     {item.badge}
                   </span>
                 ) : null}
-                {!item.to ? (
-                  <motion.span
-                    initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={easeOutFast}
-                  >
-                    <Chip
-                      variant="outline"
-                      className="px-1.5 py-0.5 text-[10px] text-on-surface/40"
-                    >
-                      Coming soon
-                    </Chip>
-                  </motion.span>
-                ) : null}
               </span>
             );
+            const comingSoon = !item.to ? (
+              <motion.span
+                className="ml-auto shrink-0"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={easeOutFast}
+              >
+                <Chip
+                  variant="outline"
+                  className="px-1 py-0 text-[8px] leading-3.5 tracking-wide text-on-surface/35"
+                >
+                  Coming soon
+                </Chip>
+              </motion.span>
+            ) : null;
 
             if (item.to) {
               return (
@@ -133,16 +136,14 @@ export function AppShell() {
                   to={item.to}
                   className={({ isActive }) =>
                     cn(
-                      "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-body-sm transition-colors",
+                      "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2.5 text-body-sm transition-colors",
                       isActive
                         ? "bg-primary/10 text-primary"
                         : "text-on-surface/70 hover:bg-white/5 hover:text-on-surface",
                     )
                   }
                 >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                  <span>{item.label}</span>
-                  {trailing}
+                  {label}
                 </NavLink>
               );
             }
@@ -150,12 +151,11 @@ export function AppShell() {
             return (
               <span
                 key={item.label}
-                className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-body-sm text-on-surface/40"
+                className="flex w-full cursor-default items-center gap-2 rounded-md px-3 py-2.5 text-body-sm text-on-surface/40"
                 aria-disabled="true"
               >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                <span>{item.label}</span>
-                {trailing}
+                {label}
+                {comingSoon}
               </span>
             );
           })}

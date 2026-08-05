@@ -62,7 +62,7 @@ export function SettingsPage() {
               {!section.live ? (
                 <Chip
                   variant="outline"
-                  className="px-1.5 py-0.5 text-[10px] text-on-surface/40"
+                  className="px-1 py-0 text-[8px] leading-3.5 tracking-wide text-on-surface/35"
                 >
                   Soon
                 </Chip>
@@ -143,7 +143,10 @@ function ComingSoonSection({
     <section className="max-w-xl">
       <div className="flex items-center gap-2">
         <h2 className="text-title-md font-medium text-white">{title}</h2>
-        <Chip variant="outline" className="text-[10px] text-on-surface/50">
+        <Chip
+          variant="outline"
+          className="px-1 py-0 text-[8px] leading-3.5 tracking-wide text-on-surface/35"
+        >
           Coming soon
         </Chip>
       </div>
