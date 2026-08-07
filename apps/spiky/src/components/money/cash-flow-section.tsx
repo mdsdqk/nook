@@ -26,12 +26,12 @@ export function CashFlowSection({ series }: CashFlowSectionProps) {
   return (
     <section aria-labelledby="cashflow-heading">
       <Card className="hover:glass-1">
-        <CardHeader className="mb-0 items-start">
+        <CardHeader className="mb-0 flex-col items-stretch sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle id="cashflow-heading">Cash Flow</CardTitle>
             <CardDescription>Monthly net cash position.</CardDescription>
           </div>
-          <div className="flex flex-col items-end gap-1 text-right">
+          <div className="mt-3 flex flex-col gap-1 text-left sm:mt-0 sm:items-end sm:text-right">
             {recent.map((point) => (
               <p key={point.month} className="text-body-sm">
                 <span className="text-on-surface/50">{point.month}</span>{" "}

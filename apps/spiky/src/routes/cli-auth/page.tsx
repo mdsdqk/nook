@@ -172,7 +172,7 @@ function CliAuthShell({ children }: { children: React.ReactNode }) {
           </div>
           <span className="text-title-md font-medium text-white">Nook CLI</span>
         </div>
-        <h1 className="text-headline-lg font-semibold text-white">
+        <h1 className="text-headline-lg font-semibold text-white max-md:text-headline-lg-mobile">
           Authorize CLI
         </h1>
         <div className="mt-4">{children}</div>

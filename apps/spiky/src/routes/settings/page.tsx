@@ -36,7 +36,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <header className="flex h-14 shrink-0 items-center border-b border-white/5 px-container">
+      <header className="hidden h-14 shrink-0 items-center border-b border-white/5 px-page md:flex">
         <h1 className="text-title-md font-medium text-white">Settings</h1>
       </header>
 
@@ -71,15 +71,15 @@ export function SettingsPage() {
           ))}
         </nav>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-container py-stack-md">
-          <div className="mb-stack-md flex gap-1 overflow-x-auto sm:hidden">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-page py-stack-md">
+          <div className="mb-stack-md -mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 sm:hidden">
             {sections.map((section) => (
               <button
                 key={section.id}
                 type="button"
                 onClick={() => setActive(section.id)}
                 className={cn(
-                  "shrink-0 rounded-md px-3 py-1.5 text-body-sm transition-colors",
+                  "shrink-0 rounded-md px-3 py-2 text-body-sm transition-colors",
                   active === section.id
                     ? "bg-primary/10 text-primary"
                     : "text-on-surface/60 hover:bg-white/5",
