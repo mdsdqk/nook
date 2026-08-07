@@ -52,7 +52,7 @@ export function AccountCard({ account, onClick }: AccountCardProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "glass-1 flex min-w-[220px] flex-1 flex-col gap-3 rounded-lg p-4 text-left transition-all duration-200",
+        "glass-1 flex min-w-[min(100%,220px)] max-w-[280px] shrink-0 snap-start flex-col gap-3 rounded-lg p-4 text-left transition-all duration-200 sm:min-w-[220px] sm:flex-1 sm:max-w-none",
         "hover:glass-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
       )}
     >

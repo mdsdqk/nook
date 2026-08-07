@@ -60,7 +60,7 @@ export function AccountsSection({
         </Button>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-1">
+      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
         {accounts.map((account) => (
           <AccountCard
             key={account.id}

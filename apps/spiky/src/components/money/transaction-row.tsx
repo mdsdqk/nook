@@ -50,47 +50,49 @@ export function TransactionRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 border-b border-white/5 px-1 py-3.5 text-left transition-colors last:border-b-0 hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      className="flex w-full min-h-11 items-start gap-3 border-b border-white/5 px-1 py-3.5 text-left transition-colors last:border-b-0 hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:items-center"
     >
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-highest text-label-caps text-on-surface">
         {initialsFromLabel(label)}
       </span>
 
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-body-sm font-medium text-white">
-          {transaction.description || label}
+      <span className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-body-sm font-medium text-white">
+            {transaction.description || label}
+          </span>
+          <span className="mt-1 flex flex-wrap items-center gap-2">
+            {transaction.category ? (
+              <Chip variant="outline" className="text-[10px]">
+                {transaction.category}
+              </Chip>
+            ) : null}
+            {account ? (
+              <span className="text-label-caps text-on-surface/40">
+                {account.name}
+              </span>
+            ) : null}
+          </span>
         </span>
-        <span className="mt-1 flex flex-wrap items-center gap-2">
-          {transaction.category ? (
-            <Chip variant="outline" className="text-[10px]">
-              {transaction.category}
-            </Chip>
-          ) : null}
-          {account ? (
-            <span className="text-label-caps text-on-surface/40">
-              {account.name}
-            </span>
-          ) : null}
-        </span>
-      </span>
 
-      <span className="shrink-0 text-right">
-        <span
-          className={cn(
-            "block font-mono text-body-sm font-medium",
-            isCredit ? "text-secondary" : "text-white",
-          )}
-        >
-          {formatSignedMoney(signed, account?.currency ?? DEFAULT_CURRENCY)}
-        </span>
-        <span className="mt-0.5 block text-label-caps text-on-surface/40">
-          {formatTxnDate(transaction.date)}
+        <span className="flex shrink-0 items-center justify-between gap-3 sm:block sm:text-right">
+          <span
+            className={cn(
+              "block font-mono text-body-sm font-medium",
+              isCredit ? "text-secondary" : "text-white",
+            )}
+          >
+            {formatSignedMoney(signed, account?.currency ?? DEFAULT_CURRENCY)}
+          </span>
+          <span className="block text-label-caps text-on-surface/40 sm:mt-0.5">
+            {formatTxnDate(transaction.date)}
+          </span>
         </span>
       </span>
 
       <span
         className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+          "mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:mt-0",
           isTransfer
             ? "bg-tertiary/10 text-tertiary"
             : isCredit

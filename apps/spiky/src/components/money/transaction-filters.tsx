@@ -33,7 +33,7 @@ export function TransactionFiltersBar({
 }: TransactionFiltersProps) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative max-w-sm">
+      <div className="relative w-full max-w-sm">
         <Search
           className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-on-surface/40"
           aria-hidden
@@ -49,7 +49,7 @@ export function TransactionFiltersBar({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 pb-0.5 sm:flex-wrap sm:overflow-visible">
         {TYPE_CHIPS.map((chip) => {
           const active = filters.type === chip.value;
           return (
@@ -57,7 +57,7 @@ export function TransactionFiltersBar({
               key={chip.value}
               type="button"
               onClick={() => onChange({ ...filters, type: chip.value })}
-              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <Chip
                 variant={active ? "primary" : "default"}
@@ -71,10 +71,12 @@ export function TransactionFiltersBar({
             </button>
           );
         })}
+      </div>
 
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
           aria-label="Filter by account"
-          className="h-8 w-auto min-w-[9rem] text-body-sm"
+          className="h-10 w-full text-body-sm sm:h-8 sm:w-auto sm:min-w-[9rem]"
           value={filters.accountId ?? ""}
           onChange={(e) =>
             onChange({
@@ -93,7 +95,7 @@ export function TransactionFiltersBar({
 
         <Select
           aria-label="Filter by card"
-          className="h-8 w-auto min-w-[9rem] text-body-sm"
+          className="h-10 w-full text-body-sm sm:h-8 sm:w-auto sm:min-w-[9rem]"
           value={filters.cardAccountId ?? ""}
           onChange={(e) =>
             onChange({

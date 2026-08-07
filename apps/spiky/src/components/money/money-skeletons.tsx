@@ -27,9 +27,12 @@ export function MoneySkeletons() {
           </div>
           <Skeleton className="h-8 w-28" />
         </div>
-        <div className="flex gap-3 overflow-hidden">
+        <div className="flex snap-x snap-mandatory gap-3 overflow-hidden">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-36 min-w-[220px] flex-1 rounded-lg" />
+            <Skeleton
+              key={i}
+              className="h-36 min-w-[min(100%,220px)] max-w-[280px] shrink-0 snap-start rounded-lg sm:min-w-[220px] sm:flex-1 sm:max-w-none"
+            />
           ))}
         </div>
       </section>

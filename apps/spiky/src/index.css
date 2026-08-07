@@ -147,12 +147,28 @@
   text-transform: uppercase;
 }
 
+/* Mobile-first page gutters: 16px base, 32px from md (DESIGN.md) */
+@utility px-page {
+  padding-inline: max(1rem, env(safe-area-inset-left))
+    max(1rem, env(safe-area-inset-right));
+
+  @variant md {
+    padding-inline: var(--spacing-container);
+  }
+}
+
 @layer base {
   *,
   *::before,
   *::after {
     box-sizing: border-box;
     border-color: var(--color-outline-variant);
+  }
+
+  /* Harden closed native dialogs — author `display:flex` utilities must not
+     override UA hide and paint closed wizards/forms into the page. */
+  dialog:not([open]) {
+    display: none !important;
   }
 
   html {

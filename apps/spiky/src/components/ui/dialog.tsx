@@ -82,8 +82,12 @@ export function Dialog({
     <dialog
       ref={dialogRef}
       className={cn(
-        "m-auto w-[min(100%-2rem,28rem)] rounded-lg border border-white/10 bg-surface-container-low p-0 text-on-surface shadow-2xl backdrop:bg-black/60 open:flex open:flex-col",
+        // Width/height only here — never set bare display utilities.
+        // `open:flex` is appended last so caller className cannot revive the
+        // closed-dialog paint bug via a stray `flex`.
+        "m-auto max-h-[min(100dvh-2rem,100%)] w-[min(100%-2rem,28rem)] overflow-hidden rounded-lg border border-white/10 bg-surface-container-low p-0 text-on-surface shadow-2xl backdrop:bg-black/60",
         className,
+        "open:flex open:flex-col",
       )}
       onClose={() => {
         if (!dismissibleRef.current) {
@@ -108,7 +112,7 @@ export function Dialog({
         }
       }}
     >
-      <div className="flex items-start justify-between gap-3 border-b border-white/5 px-5 py-4">
+      <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/5 px-5 py-4">
         <div className="min-w-0">
           <h2 className="text-title-md font-medium text-white">{title}</h2>
           {description ? (
@@ -129,7 +133,9 @@ export function Dialog({
           <span className="sr-only">Dialog is busy and cannot be closed</span>
         )}
       </div>
-      <div className="px-5 py-4">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
+        {children}
+      </div>
     </dialog>
   );
 }
@@ -141,7 +147,8 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "mt-stack-md flex flex-wrap items-center justify-end gap-2",
+        // Stick to the dialog scrollport so actions stay reachable on short viewports.
+        "sticky bottom-0 z-10 -mx-5 -mb-4 mt-stack-md flex flex-wrap items-center justify-end gap-2 border-t border-white/5 bg-surface-container-low px-5 py-3",
         className,
       )}
       {...props}
