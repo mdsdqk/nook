@@ -20,6 +20,9 @@ const GalleryPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import("@/routes/settings/page").then((m) => ({ default: m.SettingsPage })),
 );
+const OAuthConsentPage = lazy(() =>
+  import("@/routes/oauth/consent").then((m) => ({ default: m.OAuthConsentPage })),
+);
 
 function RouteFallback() {
   return <AuthBusy message="Loading…" />;
@@ -54,6 +57,14 @@ export function App() {
           element={
             <Suspense fallback={<RouteFallback />}>
               <GalleryPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/oauth/consent"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <OAuthConsentPage />
             </Suspense>
           }
         />

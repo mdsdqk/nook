@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import {
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
 import { getAppUser } from "./lib/auth";
 import { shiftIsoDate } from "./lib/dates";
 
@@ -277,6 +282,111 @@ export const syncFromStatementId = mutation({
   },
 });
 
+export type UnsyncedStatement = {
+  _id: Id<"parsedStatements">;
+  bank: string;
+  periodStart: string;
+  periodEnd: string;
+  transactionCount: number;
+  accountNumberMasked: string;
+};
+
+export async function listUnsyncedForUser(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+): Promise<UnsyncedStatement[]> {
+  const statements = await ctx.db
+    .query("parsedStatements")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  const unsynced: UnsyncedStatement[] = [];
+  for (const statement of statements) {
+    if (statement.validationPassed === false) continue;
+
+    const ledgerRow = await ctx.db
+      .query("transactions")
+      .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
+      .first();
+    if (!ledgerRow) {
+      unsynced.push({
+        _id: statement._id,
+        bank: statement.bank,
+        periodStart: statement.periodStart,
+        periodEnd: statement.periodEnd,
+        transactionCount: statement.transactionCount,
+        accountNumberMasked: statement.accountNumberMasked,
+      });
+    }
+  }
+  return unsynced;
+}
+
+export async function syncPendingStatementsForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+): Promise<{
+  statementsSynced: number;
+  accountsTouched: number;
+  transactionsUpserted: number;
+}> {
+  const statements = await ctx.db
+    .query("parsedStatements")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  let statementsSynced = 0;
+  let transactionsUpserted = 0;
+  const accountsTouched = new Set<string>();
+
+  for (const statement of statements) {
+    if (statement.validationPassed === false) continue;
+
+    const ledgerRow = await ctx.db
+      .query("transactions")
+      .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
+      .first();
+    if (ledgerRow) continue;
+
+    const parsedTxns = await ctx.db
+      .query("parsedTransactions")
+      .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
+      .collect();
+
+    parsedTxns.sort((a, b) => a.sequence - b.sequence);
+
+    const result = await syncStatementToLedger(ctx, {
+      userId,
+      statementId: statement._id,
+      bank: statement.bank,
+      accountFingerprint: statement.accountFingerprint,
+      accountNumberMasked: statement.accountNumberMasked,
+      currency: statement.currency,
+      periodStart: statement.periodStart,
+      periodEnd: statement.periodEnd,
+      openingBalance: statement.openingBalance,
+      closingBalance: statement.closingBalance,
+      transactions: parsedTxns.map((txn) => ({
+        date: txn.date,
+        narration: txn.narration,
+        ...(txn.debit !== undefined ? { debit: txn.debit } : {}),
+        ...(txn.credit !== undefined ? { credit: txn.credit } : {}),
+        externalKey: txn.externalKey,
+      })),
+    });
+
+    statementsSynced++;
+    transactionsUpserted += result.transactionsUpserted;
+    accountsTouched.add(result.accountId);
+  }
+
+  return {
+    statementsSynced,
+    accountsTouched: accountsTouched.size,
+    transactionsUpserted,
+  };
+}
+
 const unsyncedStatementValidator = v.object({
   _id: v.id("parsedStatements"),
   bank: v.string(),
@@ -291,31 +401,7 @@ export const listUnsynced = query({
   returns: v.array(unsyncedStatementValidator),
   handler: async (ctx) => {
     const user = await getAppUser(ctx);
-    const statements = await ctx.db
-      .query("parsedStatements")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const unsynced = [];
-    for (const statement of statements) {
-      if (statement.validationPassed === false) continue;
-
-      const ledgerRow = await ctx.db
-        .query("transactions")
-        .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
-        .first();
-      if (!ledgerRow) {
-        unsynced.push({
-          _id: statement._id,
-          bank: statement.bank,
-          periodStart: statement.periodStart,
-          periodEnd: statement.periodEnd,
-          transactionCount: statement.transactionCount,
-          accountNumberMasked: statement.accountNumberMasked,
-        });
-      }
-    }
-    return unsynced;
+    return await listUnsyncedForUser(ctx, user._id);
   },
 });
 
@@ -328,60 +414,6 @@ export const syncPendingForUser = mutation({
   }),
   handler: async (ctx) => {
     const user = await getAppUser(ctx);
-    const statements = await ctx.db
-      .query("parsedStatements")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    let statementsSynced = 0;
-    let transactionsUpserted = 0;
-    const accountsTouched = new Set<string>();
-
-    for (const statement of statements) {
-      if (statement.validationPassed === false) continue;
-
-      const ledgerRow = await ctx.db
-        .query("transactions")
-        .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
-        .first();
-      if (ledgerRow) continue;
-
-      const parsedTxns = await ctx.db
-        .query("parsedTransactions")
-        .withIndex("by_statement", (q) => q.eq("statementId", statement._id))
-        .collect();
-
-      parsedTxns.sort((a, b) => a.sequence - b.sequence);
-
-      const result = await syncStatementToLedger(ctx, {
-        userId: user._id,
-        statementId: statement._id,
-        bank: statement.bank,
-        accountFingerprint: statement.accountFingerprint,
-        accountNumberMasked: statement.accountNumberMasked,
-        currency: statement.currency,
-        periodStart: statement.periodStart,
-        periodEnd: statement.periodEnd,
-        openingBalance: statement.openingBalance,
-        closingBalance: statement.closingBalance,
-        transactions: parsedTxns.map((txn) => ({
-          date: txn.date,
-          narration: txn.narration,
-          ...(txn.debit !== undefined ? { debit: txn.debit } : {}),
-          ...(txn.credit !== undefined ? { credit: txn.credit } : {}),
-          externalKey: txn.externalKey,
-        })),
-      });
-
-      statementsSynced++;
-      transactionsUpserted += result.transactionsUpserted;
-      accountsTouched.add(result.accountId);
-    }
-
-    return {
-      statementsSynced,
-      accountsTouched: accountsTouched.size,
-      transactionsUpserted,
-    };
+    return await syncPendingStatementsForUser(ctx, user._id);
   },
 });

@@ -31,6 +31,9 @@ import type * as lib_statementImportLimits from "../lib/statementImportLimits.js
 import type * as lib_transferLinks from "../lib/transferLinks.js";
 import type * as lib_transferMatch from "../lib/transferMatch.js";
 import type * as lib_trustedOrigins from "../lib/trustedOrigins.js";
+import type * as lib_mcpAuth from "../lib/mcpAuth.js";
+import type * as mcpApi from "../mcpApi.js";
+import type * as mcpOauth from "../mcpOauth.js";
 import type * as migrations from "../migrations.js";
 import type * as statementImportActions from "../statementImportActions.js";
 import type * as statementUpload from "../statementUpload.js";
@@ -70,6 +73,9 @@ declare const fullApi: ApiFromModules<{
   "lib/transferLinks": typeof lib_transferLinks;
   "lib/transferMatch": typeof lib_transferMatch;
   "lib/trustedOrigins": typeof lib_trustedOrigins;
+  "lib/mcpAuth": typeof lib_mcpAuth;
+  mcpApi: typeof mcpApi;
+  mcpOauth: typeof mcpOauth;
   migrations: typeof migrations;
   statementImportActions: typeof statementImportActions;
   statementUpload: typeof statementUpload;

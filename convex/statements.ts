@@ -61,7 +61,7 @@ type TxnRow = {
   externalKey: string;
 };
 
-async function upsertStatementMetaForUser(
+export async function upsertStatementMetaForUser(
   ctx: MutationCtx,
   userId: Id<"users">,
   args: UpsertMeta,
@@ -132,7 +132,7 @@ async function upsertStatementMetaForUser(
   return { statementId, action: "created" };
 }
 
-async function appendParsedTransactions(
+export async function appendParsedTransactions(
   ctx: MutationCtx,
   statementId: Id<"parsedStatements">,
   transactions: TxnRow[],
