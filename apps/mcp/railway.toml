@@ -1,0 +1,19 @@
+[build]
+# Set the Railway service root to the monorepo root so these paths resolve.
+builder = "DOCKERFILE"
+dockerfilePath = "apps/mcp/Dockerfile"
+watchPatterns = [
+  "apps/mcp/**",
+  "packages/**",
+  "convex/**",
+  "package.json",
+  "bun.lock",
+]
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+
+[service]
+internalPort = 8787

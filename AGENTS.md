@@ -9,6 +9,7 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 
 ### The functional product: the statement-parsing CLI
 - The only fully-implemented product is the CLI (`apps/cli`). Run it from the repo root: `bun run statement <detect|validate|parse> <pdf-or-dir>` (see `docs/tech/cli-parsing.md`). `parse` supports `--out <dir>` (JSON), `--convex`, and `--sync-ledger --user <name>`.
+- **Hosted MCP** (`apps/mcp`, see `docs/tech/mcp.md`): Streamable HTTP + OAuth 2.1; Spiky hosts `/oauth/consent`. Run with `bun run dev:mcp` (`CONVEX_URL`, `MCP_PUBLIC_URL`, `AUTH_UI_PUBLIC_URL`, `MCP_CONSENT_SECRET` in production).
 - **Bank statement PDFs are not in the repo.** `sample_data/` is gitignored and empty on a fresh checkout. The CLI and `packages/pipeline`'s `parse-file.test.ts` need real PDFs at `sample_data/savings/*.pdf`; without them those pipeline tests fail (`READ_ERROR` / `UNKNOWN_BANK`). All other package unit tests use synthetic in-memory documents and pass. To smoke-test the pipeline without real statements, you can generate a synthetic HDFC-format PDF with `@libpdf/core` (a `packages/readers` dependency) whose extracted lines match the format in `packages/parsers/src/__tests__/hdfc-savings.test.ts`.
 
 ### Testing caveats
@@ -26,4 +27,4 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 
 ### Web / mobile
 - `apps/web` (`bun run dev:web`, Vite on port 5173) and `apps/mobile` (`bun run dev:mobile`, Expo) are scaffolds: stub pages with routing but no backend wiring yet.
-- `apps/spiky` (`bun run dev:spiky`, Vite on port 5174) is a blank React playground for spikes and POCs before promoting ideas into `apps/web`.
+- `apps/spiky` (`bun run dev:spiky`, Vite on port 5174) is the UI spike and **MCP OAuth consent host** (`/oauth/consent`) before promoting into `apps/web`.

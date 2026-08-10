@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
+import { safeReturnTo } from "@/lib/safe-return-to";
 
 export function RequireAuth() {
   const { isAuthenticated } = useAuth();
@@ -13,11 +14,18 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-export function RedirectIfAuthed({ children }: { children: ReactNode }) {
+export function RedirectIfAuthed({
+  children,
+  returnTo,
+}: {
+  children: ReactNode;
+  returnTo?: string | null;
+}) {
   const { isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    const dest = safeReturnTo(returnTo) ?? "/dashboard";
+    return <Navigate to={dest} replace />;
   }
 
   return children;

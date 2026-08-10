@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useConvex, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@nook/convex/_generated/api";
 import type { Id } from "@nook/convex/_generated/dataModel";
 
@@ -16,6 +16,8 @@ export type Session = {
   username: string;
   userId: Id<"users">;
   name: string;
+  /** Opaque Convex-backed UI session; required for MCP OAuth approve. */
+  sessionToken: string;
 };
 
 type AuthContextValue = {
@@ -31,15 +33,21 @@ function readStoredSession(): Session | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Session;
+    const parsed = JSON.parse(raw) as Partial<Session>;
     if (
       typeof parsed.username !== "string" ||
       typeof parsed.userId !== "string" ||
-      typeof parsed.name !== "string"
+      typeof parsed.name !== "string" ||
+      typeof parsed.sessionToken !== "string"
     ) {
       return null;
     }
-    return parsed;
+    return {
+      username: parsed.username,
+      userId: parsed.userId as Id<"users">,
+      name: parsed.name,
+      sessionToken: parsed.sessionToken,
+    };
   } catch {
     return null;
   }
@@ -53,9 +61,18 @@ function writeStoredSession(session: Session | null) {
   }
 }
 
+async function hashToken(token: string): Promise<string> {
+  const data = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const convex = useConvex();
   const createUser = useMutation(api.users.create);
+  const createUiSession = useMutation(api.mcpOauth.createUiSession);
+  const revokeUiSession = useMutation(api.mcpOauth.revokeUiSession);
   const [session, setSession] = useState<Session | null>(() =>
     readStoredSession(),
   );
@@ -67,33 +84,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Username is required");
       }
 
-      const existing = await convex.query(api.users.getByUsername, {
-        username,
-      });
-
-      if (existing) {
-        const next: Session = {
-          username: existing.username,
-          userId: existing._id,
-          name: existing.name,
-        };
-        writeStoredSession(next);
-        setSession(next);
-        return;
-      }
-
-      const userId = await createUser({ username, name: username });
-      const next: Session = { username, userId, name: username };
+      await createUser({ username, name: username });
+      const minted = await createUiSession({ username });
+      const next: Session = {
+        username: minted.username,
+        userId: minted.userId,
+        name: minted.name,
+        sessionToken: minted.sessionToken,
+      };
       writeStoredSession(next);
       setSession(next);
     },
-    [convex, createUser],
+    [createUser, createUiSession],
   );
 
   const logout = useCallback(() => {
+    const current = readStoredSession();
     writeStoredSession(null);
     setSession(null);
-  }, []);
+    if (current?.sessionToken) {
+      void hashToken(current.sessionToken)
+        .then((tokenHash) => revokeUiSession({ tokenHash }))
+        .catch(() => {
+          // Best-effort revoke; local logout still succeeds.
+        });
+    }
+  }, [revokeUiSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

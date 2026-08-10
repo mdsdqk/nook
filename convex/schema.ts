@@ -200,4 +200,50 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_content_hash", ["userId", "contentHash"])
     .index("by_dedupe", ["userId", "provider", "statementType", "contentHash"]),
+
+  // --- MCP OAuth 2.1 (shared by apps/mcp + Spiky consent UI) ---
+  mcpOauthClients: defineTable({
+    clientId: v.string(),
+    clientSecretHash: v.optional(v.string()),
+    clientName: v.optional(v.string()),
+    redirectUris: v.array(v.string()),
+    grantTypes: v.array(v.string()),
+    tokenEndpointAuthMethod: v.string(),
+    createdAt: v.number(),
+  }).index("by_client_id", ["clientId"]),
+
+  mcpOauthCodes: defineTable({
+    codeHash: v.string(),
+    clientId: v.string(),
+    userId: v.id("users"),
+    redirectUri: v.string(),
+    codeChallenge: v.string(),
+    codeChallengeMethod: v.string(),
+    resource: v.optional(v.string()),
+    scopes: v.array(v.string()),
+    expiresAt: v.number(),
+    used: v.boolean(),
+  }).index("by_code_hash", ["codeHash"]),
+
+  mcpOauthTokens: defineTable({
+    tokenHash: v.string(),
+    clientId: v.string(),
+    userId: v.id("users"),
+    scopes: v.array(v.string()),
+    resource: v.optional(v.string()),
+    expiresAt: v.number(),
+    refreshTokenHash: v.optional(v.string()),
+    refreshExpiresAt: v.optional(v.number()),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_refresh_hash", ["refreshTokenHash"]),
+
+  /** Browser UI sessions (Spiky / web) used to prove identity on MCP /approve. */
+  mcpUiSessions: defineTable({
+    tokenHash: v.string(),
+    userId: v.id("users"),
+    expiresAt: v.number(),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user", ["userId"]),
 });

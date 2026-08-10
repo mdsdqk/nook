@@ -1,19 +1,23 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { RedirectIfAuthed } from "@/components/require-auth";
+import { safeReturnTo } from "@/lib/safe-return-to";
 
 export function LoginPage() {
+  const [search] = useSearchParams();
+  const returnTo = search.get("returnTo");
+
   return (
-    <RedirectIfAuthed>
-      <LoginForm />
+    <RedirectIfAuthed returnTo={returnTo}>
+      <LoginForm returnTo={returnTo} />
     </RedirectIfAuthed>
   );
 }
 
-function LoginForm() {
+function LoginForm({ returnTo }: { returnTo: string | null }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -26,7 +30,7 @@ function LoginForm() {
     setPending(true);
     try {
       await login(username);
-      navigate("/dashboard", { replace: true });
+      navigate(safeReturnTo(returnTo) ?? "/dashboard", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");
     } finally {

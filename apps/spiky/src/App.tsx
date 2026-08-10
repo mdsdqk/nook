@@ -8,6 +8,7 @@ import { LoginPage } from "@/routes/login/page";
 import { DashboardPage } from "@/routes/dashboard/page";
 import { MoneyPage } from "@/routes/money/page";
 import { GalleryPage } from "@/routes/gallery/page";
+import { OAuthConsentPage } from "@/routes/oauth/consent";
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
         <Route path="/" element={<AuthRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/oauth/consent" element={<OAuthConsentPage />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<DashboardPage />} />

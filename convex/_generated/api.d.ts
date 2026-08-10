@@ -20,6 +20,7 @@ import type * as lib_holdings from "../lib/holdings.js";
 import type * as lib_ownership from "../lib/ownership.js";
 import type * as lib_transferLinks from "../lib/transferLinks.js";
 import type * as lib_transferMatch from "../lib/transferMatch.js";
+import type * as mcpOauth from "../mcpOauth.js";
 import type * as migrations from "../migrations.js";
 import type * as statements from "../statements.js";
 import type * as transactions from "../transactions.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   "lib/ownership": typeof lib_ownership;
   "lib/transferLinks": typeof lib_transferLinks;
   "lib/transferMatch": typeof lib_transferMatch;
+  mcpOauth: typeof mcpOauth;
   migrations: typeof migrations;
   statements: typeof statements;
   transactions: typeof transactions;
