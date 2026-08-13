@@ -10,8 +10,12 @@ import {
   timingSafeEqualStr,
 } from "../lib/crypto";
 import { clientIp, rateLimitAllow } from "../lib/rate-limit";
+import { putConsent, takeConsent } from "../lib/consent-store";
+import { SUPPORTED_SCOPES, resolveGrantedScopes } from "../lib/scopes";
 
-const SUPPORTED_SCOPES = ["nook.read", "nook.write"] as const;
+function serverAuth() {
+  return { serverSecret: config.serverSecret() };
+}
 
 function json(
   data: unknown,
@@ -101,16 +105,6 @@ function isAllowedRedirectUri(uri: string): boolean {
   return false;
 }
 
-function normalizeScopes(raw: string | undefined): string[] {
-  const parts = (raw ?? SUPPORTED_SCOPES.join(" "))
-    .split(/\s+/)
-    .filter(Boolean);
-  const allowed = parts.filter((s) =>
-    (SUPPORTED_SCOPES as readonly string[]).includes(s),
-  );
-  return allowed.length > 0 ? allowed : [...SUPPORTED_SCOPES];
-}
-
 function rateLimited(req: Request, bucket: string): Response | null {
   const key = `${bucket}:${clientIp(req)}`;
   if (
@@ -131,6 +125,15 @@ export async function handleRegister(req: Request): Promise<Response> {
     if (!timingSafeEqualStr(auth, expected)) {
       return json({ error: "invalid_client", error_description: "DCR unauthorized" }, 401);
     }
+  } else if (!config.allowOpenDcr) {
+    return json(
+      {
+        error: "invalid_client",
+        error_description:
+          "Dynamic client registration is disabled. Set MCP_DCR_SHARED_SECRET or MCP_ALLOW_OPEN_DCR=true for local dev.",
+      },
+      401,
+    );
   }
 
   let body: Record<string, unknown>;
@@ -177,6 +180,7 @@ export async function handleRegister(req: Request): Promise<Response> {
     : ["authorization_code", "refresh_token"];
 
   await getConvex().mutation(api.mcpOauth.registerClient, {
+    ...serverAuth(),
     clientId,
     ...(clientSecretHash ? { clientSecretHash } : {}),
     ...(clientName ? { clientName } : {}),
@@ -247,18 +251,23 @@ export async function handleAuthorize(req: Request): Promise<Response> {
     return json({ error: "invalid_request", error_description: "redirect_uri not allowed" }, 400);
   }
 
-  const ticket = signConsentTicket(
-    {
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      code_challenge: codeChallenge,
-      code_challenge_method: "S256",
-      ...(resource ? { resource } : {}),
-      ...(scope ? { scope } : {}),
-      ...(state ? { state } : {}),
-      exp: Date.now() + config.consentTicketTtlSec * 1000,
-    },
-    config.consentSecret(),
+  const ticketPayload = {
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256" as const,
+    ...(resource ? { resource } : {}),
+    ...(scope ? { scope } : {}),
+    ...(state ? { state } : {}),
+    exp: Date.now() + config.consentTicketTtlSec * 1000,
+  };
+  const ticket = signConsentTicket(ticketPayload, config.consentSecret());
+  const consentId = randomToken(16);
+  putConsent(
+    consentId,
+    ticket,
+    ticketPayload,
+    config.consentTicketTtlSec * 1000,
   );
 
   const consent = new URL(`${config.authUiPublicUrl}/oauth/consent`);
@@ -266,7 +275,7 @@ export async function handleAuthorize(req: Request): Promise<Response> {
   consent.searchParams.set("redirect_uri", redirectUri);
   consent.searchParams.set("code_challenge", codeChallenge);
   consent.searchParams.set("code_challenge_method", "S256");
-  consent.searchParams.set("consent_ticket", ticket);
+  consent.searchParams.set("consent_id", consentId);
   if (state) consent.searchParams.set("state", state);
   if (resource) consent.searchParams.set("resource", resource);
   if (scope) consent.searchParams.set("scope", scope);
@@ -298,7 +307,7 @@ export async function handleApprove(req: Request): Promise<Response> {
     resource?: string;
     scope?: string;
     state?: string;
-    consent_ticket?: string;
+    consent_id?: string;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -311,23 +320,32 @@ export async function handleApprove(req: Request): Promise<Response> {
     !body.redirect_uri ||
     !body.code_challenge ||
     !body.session_token ||
-    !body.consent_ticket
+    !body.consent_id
   ) {
     return json(
       {
         error: "invalid_request",
         error_description:
-          "consent_ticket, session_token, and OAuth fields are required",
+          "consent_id, session_token, and OAuth fields are required",
       },
       400,
       corsHeaders(origin),
     );
   }
 
-  const ticket = verifyConsentTicket(
-    body.consent_ticket,
-    config.consentSecret(),
-  );
+  const stored = takeConsent(body.consent_id);
+  if (!stored) {
+    return json(
+      {
+        error: "invalid_grant",
+        error_description: "Invalid or expired consent",
+      },
+      400,
+      corsHeaders(origin),
+    );
+  }
+
+  const ticket = verifyConsentTicket(stored.ticket, config.consentSecret());
   if (!ticket) {
     return json(
       {
@@ -380,11 +398,31 @@ export async function handleApprove(req: Request): Promise<Response> {
     );
   }
 
+  const ticketCeiling = resolveGrantedScopes(ticket.scope);
+  if (!ticketCeiling) {
+    return json(
+      { error: "invalid_scope", error_description: "No valid scopes on consent" },
+      400,
+      corsHeaders(origin),
+    );
+  }
+  const scopes = resolveGrantedScopes(body.scope, ticketCeiling);
+  if (!scopes) {
+    return json(
+      {
+        error: "invalid_scope",
+        error_description: "Requested scopes exceed consent",
+      },
+      400,
+      corsHeaders(origin),
+    );
+  }
+
   const code = randomToken(32);
   const codeHash = sha256Hex(code);
-  const scopes = normalizeScopes(body.scope ?? ticket.scope);
 
   await getConvex().mutation(api.mcpOauth.createAuthorizationCode, {
+    ...serverAuth(),
     codeHash,
     clientId: body.client_id,
     userId: session,
@@ -440,11 +478,11 @@ export async function handleToken(req: Request): Promise<Response> {
   const consumed = await getConvex().mutation(
     api.mcpOauth.consumeAuthorizationCode,
     {
+      ...serverAuth(),
       codeHash: sha256Hex(code),
       clientId,
       redirectUri,
       codeVerifier,
-      now: Date.now(),
     },
   );
   if (!consumed) {
@@ -469,9 +507,9 @@ async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
   const accessToken = randomToken(32);
   const newRefresh = randomToken(32);
   const rotated = await getConvex().mutation(api.mcpOauth.rotateRefreshToken, {
+    ...serverAuth(),
     refreshTokenHash: sha256Hex(refreshToken),
     clientId,
-    now: Date.now(),
     newAccessTokenHash: sha256Hex(accessToken),
     newRefreshTokenHash: sha256Hex(newRefresh),
     accessExpiresAt: Date.now() + config.accessTokenTtlSec * 1000,
@@ -501,6 +539,7 @@ async function issueTokenPair(args: {
   const expiresIn = config.accessTokenTtlSec;
 
   await getConvex().mutation(api.mcpOauth.storeAccessToken, {
+    ...serverAuth(),
     tokenHash: sha256Hex(accessToken),
     clientId: args.clientId,
     userId: args.userId,

@@ -20,6 +20,10 @@ export type AuthUser = {
   scopes: string[];
 };
 
+function serverAuth() {
+  return { serverSecret: config.serverSecret() };
+}
+
 /**
  * Resolve app user from a Better Auth session token (same mechanism as CLI auth).
  * Exchanges session → Convex JWT, then calls users.me / ensureCurrentUser.
@@ -54,8 +58,8 @@ export async function resolveBearerToken(
   const { sha256Hex } = await import("./crypto");
   const tokenHash = sha256Hex(token);
   const row = await getConvex().query(api.mcpOauth.resolveAccessToken, {
+    ...serverAuth(),
     tokenHash,
-    now: Date.now(),
   });
   if (!row) return null;
   return { userId: row.userId, tokenHash, scopes: row.scopes };
@@ -67,8 +71,8 @@ export async function upsertStatementAndSync(
   syncLedger: boolean,
 ) {
   const result = await getConvex().mutation(api.mcpApi.upsertStatementAndSync, {
+    ...serverAuth(),
     accessTokenHash: tokenHash,
-    now: Date.now(),
     bank: payload.bank,
     accountFingerprint: payload.accountFingerprint,
     accountNumberMasked: payload.accountNumberMasked,
@@ -107,8 +111,8 @@ export async function upsertKuvera(
   payload: KuveraConvexWritePayload,
 ) {
   return await getConvex().mutation(api.mcpApi.upsertKuvera, {
+    ...serverAuth(),
     accessTokenHash: tokenHash,
-    now: Date.now(),
     contentHash: payload.contentHash,
     ...(payload.sourcePath ? { sourcePath: payload.sourcePath } : {}),
     periodLabel: payload.periodLabel,

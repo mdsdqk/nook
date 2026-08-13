@@ -14,7 +14,7 @@ type ConsentParams = {
   redirectUri: string;
   codeChallenge: string;
   codeChallengeMethod: string;
-  consentTicket: string;
+  consentId: string;
   state: string | null;
   resource: string | null;
   scope: string | null;
@@ -25,14 +25,14 @@ function readParams(search: URLSearchParams): ConsentParams | null {
   const clientId = search.get("client_id");
   const redirectUri = search.get("redirect_uri");
   const codeChallenge = search.get("code_challenge");
-  const consentTicket = search.get("consent_ticket");
-  if (!clientId || !redirectUri || !codeChallenge || !consentTicket) return null;
+  const consentId = search.get("consent_id");
+  if (!clientId || !redirectUri || !codeChallenge || !consentId) return null;
   return {
     clientId,
     redirectUri,
     codeChallenge,
     codeChallengeMethod: search.get("code_challenge_method") ?? "S256",
-    consentTicket,
+    consentId,
     state: search.get("state"),
     resource: search.get("resource"),
     scope: search.get("scope"),
@@ -62,7 +62,7 @@ export function OAuthConsentPage() {
           Invalid OAuth request
         </h1>
         <p className="mt-2 text-body-sm text-on-surface/60">
-          Missing client_id, redirect_uri, code_challenge, or consent_ticket.
+          Missing client_id, redirect_uri, code_challenge, or consent_id.
         </p>
       </Shell>
     );
@@ -127,7 +127,7 @@ export function OAuthConsentPage() {
         redirect_uri: consent.redirectUri,
         code_challenge: consent.codeChallenge,
         code_challenge_method: consent.codeChallengeMethod,
-        consent_ticket: consent.consentTicket,
+        consent_id: consent.consentId,
         session_token: sessionToken,
       };
       if (consent.resource) body.resource = consent.resource;

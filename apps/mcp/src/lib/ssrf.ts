@@ -1,12 +1,15 @@
 /** Block SSRF to private / link-local / metadata addresses. */
 
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+
 const BLOCKED_HOSTNAMES = new Set([
   "localhost",
   "metadata.google.internal",
   "metadata",
 ]);
 
-function isPrivateIpv4(hostname: string): boolean {
+export function isPrivateIpv4(hostname: string): boolean {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (!m) return false;
   const parts = m.slice(1).map(Number);
@@ -22,15 +25,23 @@ function isPrivateIpv4(hostname: string): boolean {
   return false;
 }
 
-function isPrivateIpv6(hostname: string): boolean {
+export function isPrivateIpv6(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   return (
     h === "::1" ||
     h === "::" ||
     h.startsWith("fc") ||
     h.startsWith("fd") ||
-    h.startsWith("fe80")
+    h.startsWith("fe80") ||
+    (h.startsWith("::ffff:") && isPrivateIpv4(h.slice("::ffff:".length)))
   );
+}
+
+export function isPrivateIpAddress(address: string): boolean {
+  const v = isIP(address);
+  if (v === 4) return isPrivateIpv4(address);
+  if (v === 6) return isPrivateIpv6(address);
+  return true; // unknown → block
 }
 
 export function assertSafeFileUrl(raw: string): URL {
@@ -56,7 +67,40 @@ export function assertSafeFileUrl(raw: string): URL {
     throw new Error("fileUrl must not target private or link-local addresses");
   }
 
-  // Prefer HTTPS in production; allow http only for non-private hosts (already checked).
+  return url;
+}
+
+/** Resolve DNS and reject private/link-local answers (mitigates DNS rebinding). */
+export async function assertSafeResolvedUrl(
+  raw: string,
+  resolveDns: (
+    host: string,
+  ) => Promise<Array<{ address: string; family: number }> > = (host) =>
+    lookup(host, { all: true, verbatim: true }),
+): Promise<URL> {
+  const url = assertSafeFileUrl(raw);
+  const host = url.hostname;
+  if (isIP(host)) {
+    if (isPrivateIpAddress(host)) {
+      throw new Error("fileUrl must not target private or link-local addresses");
+    }
+    return url;
+  }
+
+  let records: Array<{ address: string; family: number }>;
+  try {
+    records = await resolveDns(host);
+  } catch {
+    throw new Error("fileUrl host could not be resolved");
+  }
+  if (records.length === 0) {
+    throw new Error("fileUrl host could not be resolved");
+  }
+  for (const rec of records) {
+    if (isPrivateIpAddress(rec.address)) {
+      throw new Error("fileUrl must not target private or link-local addresses");
+    }
+  }
   return url;
 }
 
@@ -64,7 +108,7 @@ export async function fetchUrlWithLimit(
   rawUrl: string,
   maxBytes: number,
 ): Promise<Uint8Array> {
-  const url = assertSafeFileUrl(rawUrl);
+  const url = await assertSafeResolvedUrl(rawUrl);
   const res = await fetch(url, {
     redirect: "error",
     headers: { accept: "*/*" },

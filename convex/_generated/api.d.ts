@@ -26,6 +26,7 @@ import type * as lib_dates from "../lib/dates.js";
 import type * as lib_holdings from "../lib/holdings.js";
 import type * as lib_importPolicy from "../lib/importPolicy.js";
 import type * as lib_mcpAuth from "../lib/mcpAuth.js";
+import type * as lib_mcpServerAuth from "../lib/mcpServerAuth.js";
 import type * as lib_ownership from "../lib/ownership.js";
 import type * as lib_profile from "../lib/profile.js";
 import type * as lib_statementImportLimits from "../lib/statementImportLimits.js";
@@ -68,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   "lib/holdings": typeof lib_holdings;
   "lib/importPolicy": typeof lib_importPolicy;
   "lib/mcpAuth": typeof lib_mcpAuth;
+  "lib/mcpServerAuth": typeof lib_mcpServerAuth;
   "lib/ownership": typeof lib_ownership;
   "lib/profile": typeof lib_profile;
   "lib/statementImportLimits": typeof lib_statementImportLimits;

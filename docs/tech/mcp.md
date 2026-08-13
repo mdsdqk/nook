@@ -96,20 +96,25 @@ Required env on the service:
 - `MCP_PUBLIC_URL` — public HTTPS origin of the MCP service (no trailing slash)
 - `AUTH_UI_PUBLIC_URL` — public Spiky (or future web) origin
 - `MCP_CONSENT_SECRET` — long random secret used to HMAC consent tickets (required in production)
+- `MCP_SERVER_SECRET` — shared with Convex (`bunx convex env set MCP_SERVER_SECRET`); gates `mcpOauth` / `mcpApi` calls
 - `PORT` — usually set by Railway (`8787` in Dockerfile)
 
 Optional:
 
 - `MCP_DCR_SHARED_SECRET` — when set, `POST /register` requires `Authorization: Bearer <secret>`
+- `MCP_ALLOW_OPEN_DCR` — default `false`; set `true` only for local unauthenticated DCR (also enables a fixed dev `MCP_SERVER_SECRET` fallback)
 - `MCP_REFRESH_TOKEN_TTL_SEC`, `MCP_ACCESS_TOKEN_TTL_SEC`, `MCP_AUTH_CODE_TTL_SEC`
 - `MCP_RATE_LIMIT_MAX` / `MCP_RATE_LIMIT_WINDOW_MS`
 - `MCP_ALLOW_LOCALHOST_REDIRECTS` — default `true` for local Claude OAuth redirects
 
 ### Security notes
 
-- `/approve` requires a signed `consent_ticket` from `/authorize` plus a Better Auth `session_token` from Spiky (exchanged for a Convex JWT to resolve the app user).
+- `/authorize` stores a signed consent ticket server-side and redirects Spiky with an opaque `consent_id` (ticket never appears in the browser URL).
+- `/approve` requires that `consent_id` plus a Better Auth `session_token` from Spiky (exchanged for a Convex JWT to resolve the app user). Granted scopes cannot exceed the authorize-time ceiling.
+- Dynamic client registration is fail-closed unless `MCP_DCR_SHARED_SECRET` or `MCP_ALLOW_OPEN_DCR=true`.
+- Convex `mcpOauth` mutations and `mcpApi` require `MCP_SERVER_SECRET`; token expiry uses Convex server time (not client-supplied clocks).
 - Tool data access goes through `convex/mcpApi.ts`, authenticated by MCP access-token hash (assistants do not hold Better Auth JWTs).
-- `fileUrl` tool inputs block private/link-local hosts (SSRF guard).
+- `fileUrl` tool inputs resolve DNS and block private/link-local answers (SSRF / rebinding guard).
 - Tools enforce OAuth scopes: `nook.read` vs `nook.write`.
 - Refresh tokens are rotated on use; PKCE is verified before authorization codes are consumed.
 

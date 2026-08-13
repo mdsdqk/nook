@@ -1,10 +1,26 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertMcpServerSecret } from "./lib/mcpServerAuth";
 
-const DEFAULT_SCOPES = ["nook.read", "nook.write"];
+const SUPPORTED_SCOPES = ["nook.read", "nook.write"] as const;
+
+function requireSupportedScopes(scopes: string[]): string[] {
+  const granted = scopes.filter((s) =>
+    (SUPPORTED_SCOPES as readonly string[]).includes(s),
+  );
+  if (granted.length === 0) {
+    throw new Error("At least one supported scope is required");
+  }
+  return granted;
+}
+
+const serverSecretArg = {
+  serverSecret: v.string(),
+};
 
 export const registerClient = mutation({
   args: {
+    ...serverSecretArg,
     clientId: v.string(),
     clientSecretHash: v.optional(v.string()),
     clientName: v.optional(v.string()),
@@ -16,6 +32,7 @@ export const registerClient = mutation({
     clientId: v.string(),
   }),
   handler: async (ctx, args) => {
+    await assertMcpServerSecret(args.serverSecret);
     if (args.redirectUris.length === 0) {
       throw new Error("At least one redirect_uri is required");
     }
@@ -41,13 +58,13 @@ export const registerClient = mutation({
   },
 });
 
+/** Public client metadata for authorize (no secrets). */
 export const getClient = query({
   args: { clientId: v.string() },
   returns: v.union(
     v.object({
       _id: v.id("mcpOauthClients"),
       clientId: v.string(),
-      clientSecretHash: v.optional(v.string()),
       clientName: v.optional(v.string()),
       redirectUris: v.array(v.string()),
       grantTypes: v.array(v.string()),
@@ -65,9 +82,6 @@ export const getClient = query({
     return {
       _id: client._id,
       clientId: client.clientId,
-      ...(client.clientSecretHash
-        ? { clientSecretHash: client.clientSecretHash }
-        : {}),
       ...(client.clientName ? { clientName: client.clientName } : {}),
       redirectUris: client.redirectUris,
       grantTypes: client.grantTypes,
@@ -79,6 +93,7 @@ export const getClient = query({
 
 export const createAuthorizationCode = mutation({
   args: {
+    ...serverSecretArg,
     codeHash: v.string(),
     clientId: v.string(),
     userId: v.id("users"),
@@ -86,11 +101,13 @@ export const createAuthorizationCode = mutation({
     codeChallenge: v.string(),
     codeChallengeMethod: v.string(),
     resource: v.optional(v.string()),
-    scopes: v.optional(v.array(v.string())),
+    scopes: v.array(v.string()),
     expiresAt: v.number(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await assertMcpServerSecret(args.serverSecret);
+    const scopes = requireSupportedScopes(args.scopes);
     const user = await ctx.db.get(args.userId);
     if (!user) throw new Error("User not found");
 
@@ -114,7 +131,7 @@ export const createAuthorizationCode = mutation({
       codeChallenge: args.codeChallenge,
       codeChallengeMethod: args.codeChallengeMethod,
       ...(args.resource ? { resource: args.resource } : {}),
-      scopes: args.scopes ?? DEFAULT_SCOPES,
+      scopes,
       expiresAt: args.expiresAt,
       used: false,
     });
@@ -124,11 +141,11 @@ export const createAuthorizationCode = mutation({
 
 export const consumeAuthorizationCode = mutation({
   args: {
+    ...serverSecretArg,
     codeHash: v.string(),
     clientId: v.string(),
     redirectUri: v.string(),
     codeVerifier: v.string(),
-    now: v.number(),
   },
   returns: v.union(
     v.object({
@@ -139,6 +156,8 @@ export const consumeAuthorizationCode = mutation({
     v.null(),
   ),
   handler: async (ctx, args) => {
+    await assertMcpServerSecret(args.serverSecret);
+    const now = Date.now();
     const row = await ctx.db
       .query("mcpOauthCodes")
       .withIndex("by_code_hash", (q) => q.eq("codeHash", args.codeHash))
@@ -146,7 +165,7 @@ export const consumeAuthorizationCode = mutation({
     if (!row || row.used) return null;
     if (row.clientId !== args.clientId) return null;
     if (row.redirectUri !== args.redirectUri) return null;
-    if (row.expiresAt < args.now) return null;
+    if (row.expiresAt < now) return null;
 
     // Verify PKCE before marking used so a bad verifier cannot burn the code.
     if (row.codeChallengeMethod !== "S256") return null;
@@ -174,6 +193,7 @@ async function sha256Base64Url(verifier: string): Promise<string> {
 
 export const storeAccessToken = mutation({
   args: {
+    ...serverSecretArg,
     tokenHash: v.string(),
     clientId: v.string(),
     userId: v.id("users"),
@@ -185,11 +205,13 @@ export const storeAccessToken = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await assertMcpServerSecret(args.serverSecret);
+    const scopes = requireSupportedScopes(args.scopes);
     await ctx.db.insert("mcpOauthTokens", {
       tokenHash: args.tokenHash,
       clientId: args.clientId,
       userId: args.userId,
-      scopes: args.scopes,
+      scopes,
       ...(args.resource ? { resource: args.resource } : {}),
       expiresAt: args.expiresAt,
       ...(args.refreshTokenHash
@@ -205,9 +227,9 @@ export const storeAccessToken = mutation({
 
 export const rotateRefreshToken = mutation({
   args: {
+    ...serverSecretArg,
     refreshTokenHash: v.string(),
     clientId: v.string(),
-    now: v.number(),
     newAccessTokenHash: v.string(),
     newRefreshTokenHash: v.string(),
     accessExpiresAt: v.number(),
@@ -222,6 +244,8 @@ export const rotateRefreshToken = mutation({
     v.null(),
   ),
   handler: async (ctx, args) => {
+    await assertMcpServerSecret(args.serverSecret);
+    const now = Date.now();
     const row = await ctx.db
       .query("mcpOauthTokens")
       .withIndex("by_refresh_hash", (q) =>
@@ -230,7 +254,7 @@ export const rotateRefreshToken = mutation({
       .unique();
     if (!row) return null;
     if (row.clientId !== args.clientId) return null;
-    if (row.refreshExpiresAt !== undefined && row.refreshExpiresAt < args.now) {
+    if (row.refreshExpiresAt !== undefined && row.refreshExpiresAt < now) {
       return null;
     }
 
@@ -256,8 +280,8 @@ export const rotateRefreshToken = mutation({
 
 export const resolveAccessToken = query({
   args: {
+    ...serverSecretArg,
     tokenHash: v.string(),
-    now: v.number(),
   },
   returns: v.union(
     v.object({
@@ -270,41 +294,20 @@ export const resolveAccessToken = query({
     v.null(),
   ),
   handler: async (ctx, args) => {
+    await assertMcpServerSecret(args.serverSecret);
+    const now = Date.now();
     const row = await ctx.db
       .query("mcpOauthTokens")
       .withIndex("by_token_hash", (q) => q.eq("tokenHash", args.tokenHash))
       .unique();
     if (!row) return null;
-    if (row.expiresAt < args.now) return null;
+    if (row.expiresAt < now) return null;
     return {
       userId: row.userId,
       clientId: row.clientId,
       scopes: row.scopes,
       ...(row.resource ? { resource: row.resource } : {}),
       expiresAt: row.expiresAt,
-    };
-  },
-});
-
-export const getUserPublic = query({
-  args: { userId: v.id("users") },
-  returns: v.union(
-    v.object({
-      _id: v.id("users"),
-      email: v.string(),
-      name: v.string(),
-      username: v.optional(v.string()),
-    }),
-    v.null(),
-  ),
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) return null;
-    return {
-      _id: user._id,
-      email: user.email,
-      name: user.name,
-      ...(user.username !== undefined ? { username: user.username } : {}),
     };
   },
 });

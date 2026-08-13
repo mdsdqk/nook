@@ -26,6 +26,25 @@ function resolveConsentSecret(): string {
   return ephemeralConsentSecret;
 }
 
+/**
+ * Must match Convex env `MCP_SERVER_SECRET`.
+ * In production this must be set; locally we allow an ephemeral fallback only when
+ * open DCR is also allowed (dev).
+ */
+function resolveServerSecret(): string {
+  const fromEnv = process.env["MCP_SERVER_SECRET"];
+  if (fromEnv && fromEnv.length >= 16) return fromEnv;
+  if (process.env["MCP_ALLOW_OPEN_DCR"] === "true") {
+    console.warn(
+      "MCP_SERVER_SECRET not set; using fixed dev secret. Set MCP_SERVER_SECRET on MCP and Convex for real use.",
+    );
+    return "dev-only-mcp-server-secret-do-not-use-in-prod";
+  }
+  throw new Error(
+    "MCP_SERVER_SECRET is required (min 16 chars). Set it on the MCP process and via `bunx convex env set MCP_SERVER_SECRET`.",
+  );
+}
+
 export const config = {
   port: Number(optional("PORT", "8787")),
   mcpPublicUrl: optional("MCP_PUBLIC_URL", "http://127.0.0.1:8787").replace(
@@ -56,13 +75,16 @@ export const config = {
   ),
   authCodeTtlSec: Number(optional("MCP_AUTH_CODE_TTL_SEC", "600")),
   consentTicketTtlSec: Number(optional("MCP_CONSENT_TICKET_TTL_SEC", "600")),
-  /** Optional. When set, DCR requires Authorization: Bearer <secret>. */
+  /** When set, DCR requires Authorization: Bearer <secret>. */
   dcrSharedSecret: process.env["MCP_DCR_SHARED_SECRET"] ?? null,
+  /** Dev-only: allow unauthenticated DCR. Default false. */
+  allowOpenDcr: optional("MCP_ALLOW_OPEN_DCR", "false") === "true",
   allowInsecureLocalhostRedirects:
     optional("MCP_ALLOW_LOCALHOST_REDIRECTS", "true") === "true",
   rateLimitWindowMs: Number(optional("MCP_RATE_LIMIT_WINDOW_MS", "60000")),
   rateLimitMax: Number(optional("MCP_RATE_LIMIT_MAX", "60")),
   consentSecret: resolveConsentSecret,
+  serverSecret: resolveServerSecret,
 };
 
 export function mcpResourceUrl(): string {

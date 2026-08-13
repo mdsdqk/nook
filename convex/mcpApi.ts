@@ -1,6 +1,6 @@
 /**
  * MCP-facing Convex APIs authenticated by OAuth access-token hash
- * (not Better Auth JWT). Callers pass accessTokenHash + now from the MCP server.
+ * (not Better Auth JWT). Callers pass accessTokenHash + MCP_SERVER_SECRET from the MCP server.
  */
 import { isCashflowIn, isSpending, isTransactionType } from "@nook/domain";
 import { v } from "convex/values";
@@ -28,7 +28,7 @@ import {
 
 const mcpAuthArgs = {
   accessTokenHash: v.string(),
-  now: v.number(),
+  serverSecret: v.string(),
 };
 
 const accountWithBalanceValidator = v.object({
@@ -202,8 +202,8 @@ export const listAccounts = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
     const accounts = await ctx.db
       .query("accounts")
@@ -231,8 +231,8 @@ export const listTransactions = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
 
     let rows;
@@ -274,8 +274,8 @@ export const listStatements = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
     return await ctx.db
       .query("parsedStatements")
@@ -293,8 +293,8 @@ export const listUnsynced = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
     return await listUnsyncedForUser(ctx, user._id);
   },
@@ -313,8 +313,8 @@ export const syncPending = mutation({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.write",
+      args.serverSecret,
     );
     return await syncPendingStatementsForUser(ctx, user._id);
   },
@@ -331,8 +331,8 @@ export const syncTransfers = mutation({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.write",
+      args.serverSecret,
     );
     return await syncTransfersForUser(ctx, user._id);
   },
@@ -354,8 +354,8 @@ export const cashflowTimeline = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
     const txns = await ctx.db
       .query("transactions")
@@ -396,8 +396,8 @@ export const listInstruments = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
     return await ctx.db
       .query("instruments")
@@ -415,8 +415,8 @@ export const listHoldings = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
     return await ctx.db
       .query("holdings")
@@ -435,8 +435,8 @@ export const getPortfolio = query({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.read",
+      args.serverSecret,
     );
     return await computePortfolioForUser(ctx, user._id, args.asOfDate);
   },
@@ -463,10 +463,10 @@ export const createManualInstrument = mutation({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.write",
+      args.serverSecret,
     );
-    const { accessTokenHash: _h, now: _n, ...rest } = args;
+    const { accessTokenHash: _h, serverSecret: _s, ...rest } = args;
     return await createManualInstrumentForUser(ctx, user._id, rest);
   },
 });
@@ -496,10 +496,10 @@ export const recordManualAssetTransaction = mutation({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.write",
+      args.serverSecret,
     );
-    const { accessTokenHash: _h, now: _n, ...rest } = args;
+    const { accessTokenHash: _h, serverSecret: _s, ...rest } = args;
     return await recordManualAssetTransactionForUser(ctx, user._id, rest);
   },
 });
@@ -544,8 +544,8 @@ export const upsertStatementAndSync = mutation({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.write",
+      args.serverSecret,
     );
 
     const validationPassed = args.validationPassed ?? true;
@@ -633,10 +633,10 @@ export const upsertKuvera = mutation({
     const { user } = await requireMcpUser(
       ctx,
       args.accessTokenHash,
-      args.now,
       "nook.write",
+      args.serverSecret,
     );
-    const { accessTokenHash: _h, now: _n, ...rest } = args;
+    const { accessTokenHash: _h, serverSecret: _s, ...rest } = args;
     return await upsertKuveraCapitalGainsForUser(ctx, user._id, rest);
   },
 });

@@ -15,6 +15,7 @@ import {
 } from "../lib/convex";
 import { errorResult, loadFileBytes, textResult } from "../lib/files";
 import { requireScope } from "../lib/scopes";
+import { config } from "../lib/config";
 
 const fileInput = {
   filename: z.string().describe("Original filename including extension"),
@@ -39,7 +40,10 @@ function requireFileSource(args: {
 }
 
 function mcpAuth(user: AuthUser) {
-  return { accessTokenHash: user.tokenHash, now: Date.now() };
+  return {
+    accessTokenHash: user.tokenHash,
+    serverSecret: config.serverSecret(),
+  };
 }
 
 export function registerTools(
