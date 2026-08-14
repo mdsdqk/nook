@@ -17,6 +17,10 @@ function toCell(value: unknown): WorkbookCell {
 export class XlsxWorkbookReader implements WorkbookReader {
   async read(path: string): Promise<WorkbookDocument> {
     const bytes = await readFile(path);
+    return this.readBytes(bytes);
+  }
+
+  async readBytes(bytes: Uint8Array | Buffer): Promise<WorkbookDocument> {
     const workbook = XLSX.read(bytes, {
       type: "buffer",
       cellDates: false,

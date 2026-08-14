@@ -1,0 +1,29 @@
+{
+  "name": "@nook/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "vitest run",
+    "typecheck": "node --max-old-space-size=8192 ../../node_modules/typescript/bin/tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@nook/contracts": "workspace:*",
+    "@nook/convex": "workspace:*",
+    "@nook/persistence": "workspace:*",
+    "@nook/pipeline": "workspace:*",
+    "@nook/shared": "workspace:*",
+    "convex": "^1.42.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "@types/node": "^22.10.0",
+    "typescript": "5.9.2",
+    "vitest": "^4.1.2"
+  }
+}

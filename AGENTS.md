@@ -10,6 +10,7 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 ### The functional product: the statement-parsing CLI
 - The only fully-implemented product is the CLI (`apps/cli`). Run it from the repo root: `bun run statement <detect|validate|parse> <pdf-or-dir>` (see `docs/tech/cli-parsing.md`). `parse` supports `--out <dir>` (JSON), `--convex`, and `--sync-ledger`.
 - Convex writes require prior CLI login: `bun run statement auth login` (opens Spiky, stores session under `~/.config/nook/credentials.json`). Then `--convex` / `--sync-ledger` use that identity — there is no `--user` flag.
+- **Hosted MCP** (`apps/mcp`, see `docs/tech/mcp.md`): Streamable HTTP + OAuth 2.1; Spiky hosts `/oauth/consent`. Run with `bun run dev:mcp` (`CONVEX_URL`, `CONVEX_SITE_URL`, `MCP_PUBLIC_URL`, `AUTH_UI_PUBLIC_URL`, `MCP_CONSENT_SECRET`, `MCP_SERVER_SECRET` — same secret via `bunx convex env set MCP_SERVER_SECRET`; for local unauthenticated DCR set `MCP_ALLOW_OPEN_DCR=true`).
 - **Bank statement PDFs are not in the repo.** `sample_data/` is gitignored and empty on a fresh checkout. The CLI and `packages/pipeline`'s `parse-file.test.ts` need real PDFs at `sample_data/savings/*.pdf`; without them those pipeline tests fail (`READ_ERROR` / `UNKNOWN_BANK`). All other package unit tests use synthetic in-memory documents and pass. To smoke-test the pipeline without real statements, you can generate a synthetic HDFC-format PDF with `@libpdf/core` (a `packages/readers` dependency) whose extracted lines match the format in `packages/parsers/src/__tests__/hdfc-savings.test.ts`.
 
 ### Testing caveats
@@ -41,4 +42,4 @@ Nook is a Bun + Turborepo monorepo (Node >= 20, `packageManager: bun`). Standard
 
 ### Web / mobile
 - `apps/web` (`bun run dev:web`, Vite on port 5173) and `apps/mobile` (`bun run dev:mobile`, Expo) are scaffolds: stub pages with routing but no backend wiring yet.
-- `apps/spiky` (`bun run dev:spiky`, Vite on port 5174) is the React playground with Better Auth (Google + username/email) and money UI spikes before promoting into `apps/web`.
+- `apps/spiky` (`bun run dev:spiky`, Vite on port 5174) is the React playground with Better Auth (Google + username/email), money UI spikes, and **MCP OAuth consent** (`/oauth/consent`) before promoting into `apps/web`.

@@ -153,10 +153,81 @@ function assertIdempotentReplay(
   }
 }
 
+export type CreateManualInstrumentArgs = {
+  name: string;
+  currency: string;
+  fundHouse: string;
+  schemeName: string;
+  plan: "direct" | "regular";
+  option: "growth" | "idcw";
+  provider?: string;
+  schemeCode?: string;
+  isin?: string;
+  category?: string;
+  externalKey?: string;
+  note?: string;
+};
+
 /**
  * Create a mutual-fund instrument for manual wealth entry.
  * userId scoping is a temporary convenience — long-term instruments are shared catalog rows.
  */
+export async function createManualInstrumentForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  args: CreateManualInstrumentArgs,
+): Promise<Id<"instruments">> {
+  if (args.externalKey !== undefined) {
+    const existing = await ctx.db
+      .query("instruments")
+      .withIndex("by_external_key", (q) =>
+        q.eq("userId", userId).eq("externalKey", args.externalKey!),
+      )
+      .first();
+    if (existing) return existing._id;
+  }
+
+  // Provenance for catalog entry; does not create Holdings.
+  await ctx.db.insert("wealthEvidence", {
+    userId,
+    sourceType: "manual",
+    note: args.note ?? `Manual instrument: ${args.name}`,
+    createdAt: Date.now(),
+  });
+
+  const row: {
+    userId: Id<"users">;
+    assetClass: "mutual_fund";
+    name: string;
+    currency: string;
+    provider: string;
+    fundHouse: string;
+    schemeName: string;
+    schemeCode?: string;
+    isin?: string;
+    plan: "direct" | "regular";
+    option: "growth" | "idcw";
+    category?: string;
+    externalKey?: string;
+  } = {
+    userId,
+    assetClass: "mutual_fund",
+    name: args.name,
+    currency: args.currency,
+    provider: args.provider ?? args.fundHouse,
+    fundHouse: args.fundHouse,
+    schemeName: args.schemeName,
+    plan: args.plan,
+    option: args.option,
+  };
+  if (args.schemeCode !== undefined) row.schemeCode = args.schemeCode;
+  if (args.isin !== undefined) row.isin = args.isin;
+  if (args.category !== undefined) row.category = args.category;
+  if (args.externalKey !== undefined) row.externalKey = args.externalKey;
+
+  return await ctx.db.insert("instruments", row);
+}
+
 export const createManualInstrument = mutation({
   args: {
     name: v.string(),
@@ -175,64 +246,157 @@ export const createManualInstrument = mutation({
   returns: v.id("instruments"),
   handler: async (ctx, args) => {
     const user = await getAppUser(ctx);
-
-    if (args.externalKey !== undefined) {
-      const existing = await ctx.db
-        .query("instruments")
-        .withIndex("by_external_key", (q) =>
-          q.eq("userId", user._id).eq("externalKey", args.externalKey!),
-        )
-        .first();
-      if (existing) return existing._id;
-    }
-
-    // Provenance for catalog entry; does not create Holdings.
-    await ctx.db.insert("wealthEvidence", {
-      userId: user._id,
-      sourceType: "manual",
-      note: args.note ?? `Manual instrument: ${args.name}`,
-      createdAt: Date.now(),
-    });
-
-    const row: {
-      userId: Id<"users">;
-      assetClass: "mutual_fund";
-      name: string;
-      currency: string;
-      provider: string;
-      fundHouse: string;
-      schemeName: string;
-      schemeCode?: string;
-      isin?: string;
-      plan: "direct" | "regular";
-      option: "growth" | "idcw";
-      category?: string;
-      externalKey?: string;
-    } = {
-      userId: user._id,
-      assetClass: "mutual_fund",
-      name: args.name,
-      currency: args.currency,
-      provider: args.provider ?? args.fundHouse,
-      fundHouse: args.fundHouse,
-      schemeName: args.schemeName,
-      plan: args.plan,
-      option: args.option,
-    };
-    if (args.schemeCode !== undefined) row.schemeCode = args.schemeCode;
-    if (args.isin !== undefined) row.isin = args.isin;
-    if (args.category !== undefined) row.category = args.category;
-    if (args.externalKey !== undefined) row.externalKey = args.externalKey;
-
-    return await ctx.db.insert("instruments", row);
+    return await createManualInstrumentForUser(ctx, user._id, args);
   },
 });
+
+export type RecordManualAssetTransactionArgs = {
+  instrumentId: Id<"instruments">;
+  containerId: string;
+  type: string;
+  date: string;
+  executionType?: string;
+  quantity?: number;
+  price?: number;
+  amount?: number;
+  externalKey?: string;
+  note?: string;
+  referenceId?: string;
+  bankTransactionId?: Id<"transactions">;
+};
 
 /**
  * Record a manual asset transaction.
  * Inserts evidence → asset transaction → recomputes Holding.
  * Evidence alone never updates Holdings.
  */
+export async function recordManualAssetTransactionForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  args: RecordManualAssetTransactionArgs,
+): Promise<{
+  evidenceId: Id<"wealthEvidence">;
+  transactionId: Id<"assetTransactions">;
+  holdingId: Id<"holdings"> | null;
+}> {
+  await requireUserInstrument(ctx, userId, args.instrumentId);
+
+  if (!isAssetTransactionType(args.type)) {
+    throw new Error(
+      `Invalid asset transaction type: ${args.type}. Expected one of ${ASSET_TRANSACTION_TYPES.join(", ")}`,
+    );
+  }
+  if (requiresQuantity(args.type)) {
+    if (args.quantity === undefined || !(args.quantity > 0)) {
+      throw new Error(
+        `Asset transaction type "${args.type}" requires a positive quantity`,
+      );
+    }
+  }
+  if (
+    args.executionType !== undefined &&
+    !EXECUTION_TYPES.has(args.executionType)
+  ) {
+    throw new Error(`Invalid executionType: ${args.executionType}`);
+  }
+  if (args.bankTransactionId !== undefined) {
+    const bankTxn = await ctx.db.get(args.bankTransactionId);
+    if (!bankTxn || bankTxn.userId !== userId) {
+      throw new Error("Bank transaction not found");
+    }
+  }
+
+  if (args.externalKey !== undefined) {
+    const dup = await ctx.db
+      .query("assetTransactions")
+      .withIndex("by_owner_instrument_external_key", (q) =>
+        q
+          .eq("userId", userId)
+          .eq("instrumentId", args.instrumentId)
+          .eq("externalKey", args.externalKey!),
+      )
+      .first();
+    if (dup) {
+      assertIdempotentReplay(dup, args);
+      const holding = await ctx.db
+        .query("holdings")
+        .withIndex("by_holding_key", (q) =>
+          q
+            .eq("userId", userId)
+            .eq("instrumentId", args.instrumentId)
+            .eq("containerId", dup.containerId),
+        )
+        .unique();
+      return {
+        evidenceId: dup.evidenceId,
+        transactionId: dup._id,
+        holdingId: holding?._id ?? null,
+      };
+    }
+  }
+
+  const evidenceRow: {
+    userId: Id<"users">;
+    sourceType: "manual";
+    referenceId?: string;
+    note?: string;
+    createdAt: number;
+  } = {
+    userId,
+    sourceType: "manual",
+    createdAt: Date.now(),
+  };
+  if (args.referenceId !== undefined) evidenceRow.referenceId = args.referenceId;
+  if (args.note !== undefined) evidenceRow.note = args.note;
+
+  const evidenceId = await ctx.db.insert("wealthEvidence", evidenceRow);
+
+  const txnRow: {
+    userId: Id<"users">;
+    instrumentId: Id<"instruments">;
+    containerId: string;
+    type: string;
+    executionType?: string;
+    date: string;
+    quantity?: number;
+    price?: number;
+    amount?: number;
+    evidenceId: Id<"wealthEvidence">;
+    sourceType: "manual";
+    bankTransactionId?: Id<"transactions">;
+    externalKey?: string;
+  } = {
+    userId,
+    instrumentId: args.instrumentId,
+    containerId: args.containerId,
+    type: args.type,
+    date: args.date,
+    evidenceId,
+    sourceType: "manual",
+  };
+  if (args.executionType !== undefined) {
+    txnRow.executionType = args.executionType as AssetExecutionType;
+  }
+  if (args.quantity !== undefined) txnRow.quantity = args.quantity;
+  if (args.price !== undefined) txnRow.price = args.price;
+  if (args.amount !== undefined) txnRow.amount = args.amount;
+  if (args.bankTransactionId !== undefined) {
+    txnRow.bankTransactionId = args.bankTransactionId;
+  }
+  if (args.externalKey !== undefined) txnRow.externalKey = args.externalKey;
+
+  const transactionId = await ctx.db.insert("assetTransactions", txnRow);
+
+  const holdingId = await recomputeHolding(
+    ctx,
+    userId,
+    args.instrumentId,
+    args.containerId,
+  );
+
+  return { evidenceId, transactionId, holdingId };
+}
+
 export const recordManualAssetTransaction = mutation({
   args: {
     instrumentId: v.id("instruments"),
@@ -255,122 +419,7 @@ export const recordManualAssetTransaction = mutation({
   }),
   handler: async (ctx, args) => {
     const user = await getAppUser(ctx);
-    await requireUserInstrument(ctx, user._id, args.instrumentId);
-
-    if (!isAssetTransactionType(args.type)) {
-      throw new Error(
-        `Invalid asset transaction type: ${args.type}. Expected one of ${ASSET_TRANSACTION_TYPES.join(", ")}`,
-      );
-    }
-    if (requiresQuantity(args.type)) {
-      if (args.quantity === undefined || !(args.quantity > 0)) {
-        throw new Error(
-          `Asset transaction type "${args.type}" requires a positive quantity`,
-        );
-      }
-    }
-    if (
-      args.executionType !== undefined &&
-      !EXECUTION_TYPES.has(args.executionType)
-    ) {
-      throw new Error(`Invalid executionType: ${args.executionType}`);
-    }
-    if (args.bankTransactionId !== undefined) {
-      const bankTxn = await ctx.db.get(args.bankTransactionId);
-      if (!bankTxn || bankTxn.userId !== user._id) {
-        throw new Error("Bank transaction not found");
-      }
-    }
-
-    if (args.externalKey !== undefined) {
-      const dup = await ctx.db
-        .query("assetTransactions")
-        .withIndex("by_owner_instrument_external_key", (q) =>
-          q
-            .eq("userId", user._id)
-            .eq("instrumentId", args.instrumentId)
-            .eq("externalKey", args.externalKey!),
-        )
-        .first();
-      if (dup) {
-        assertIdempotentReplay(dup, args);
-        const holding = await ctx.db
-          .query("holdings")
-          .withIndex("by_holding_key", (q) =>
-            q
-              .eq("userId", user._id)
-              .eq("instrumentId", args.instrumentId)
-              .eq("containerId", dup.containerId),
-          )
-          .unique();
-        return {
-          evidenceId: dup.evidenceId,
-          transactionId: dup._id,
-          holdingId: holding?._id ?? null,
-        };
-      }
-    }
-
-    const evidenceRow: {
-      userId: Id<"users">;
-      sourceType: "manual";
-      referenceId?: string;
-      note?: string;
-      createdAt: number;
-    } = {
-      userId: user._id,
-      sourceType: "manual",
-      createdAt: Date.now(),
-    };
-    if (args.referenceId !== undefined) evidenceRow.referenceId = args.referenceId;
-    if (args.note !== undefined) evidenceRow.note = args.note;
-
-    const evidenceId = await ctx.db.insert("wealthEvidence", evidenceRow);
-
-    const txnRow: {
-      userId: Id<"users">;
-      instrumentId: Id<"instruments">;
-      containerId: string;
-      type: string;
-      executionType?: string;
-      date: string;
-      quantity?: number;
-      price?: number;
-      amount?: number;
-      evidenceId: Id<"wealthEvidence">;
-      sourceType: "manual";
-      bankTransactionId?: Id<"transactions">;
-      externalKey?: string;
-    } = {
-      userId: user._id,
-      instrumentId: args.instrumentId,
-      containerId: args.containerId,
-      type: args.type,
-      date: args.date,
-      evidenceId,
-      sourceType: "manual",
-    };
-    if (args.executionType !== undefined) {
-      txnRow.executionType = args.executionType as AssetExecutionType;
-    }
-    if (args.quantity !== undefined) txnRow.quantity = args.quantity;
-    if (args.price !== undefined) txnRow.price = args.price;
-    if (args.amount !== undefined) txnRow.amount = args.amount;
-    if (args.bankTransactionId !== undefined) {
-      txnRow.bankTransactionId = args.bankTransactionId;
-    }
-    if (args.externalKey !== undefined) txnRow.externalKey = args.externalKey;
-
-    const transactionId = await ctx.db.insert("assetTransactions", txnRow);
-
-    const holdingId = await recomputeHolding(
-      ctx,
-      user._id,
-      args.instrumentId,
-      args.containerId,
-    );
-
-    return { evidenceId, transactionId, holdingId };
+    return await recordManualAssetTransactionForUser(ctx, user._id, args);
   },
 });
 
@@ -434,6 +483,72 @@ export const listHoldings = query({
  * Portfolio DTO — computation only, not a stored entity.
  * Liquid cash is read-only from Money accounts.
  */
+export async function computePortfolioForUser(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  asOfDate: string,
+) {
+  const holdings = await ctx.db
+    .query("holdings")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  const instrumentDocs = await ctx.db
+    .query("instruments")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  const accounts = await ctx.db
+    .query("accounts")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  const balances = await computeBalancesForUser(ctx, userId, asOfDate);
+
+  let totalCash = 0;
+  const byInstitution = new Map<string, number>();
+  for (const account of accounts) {
+    if (!isLiquidMoneyAccount(account.type)) continue;
+    const balance = balances.get(account._id) ?? 0;
+    totalCash += balance;
+    const institution = account.institution ?? account.name;
+    byInstitution.set(
+      institution,
+      (byInstitution.get(institution) ?? 0) + balance,
+    );
+  }
+
+  const domainHoldings: Holding[] = holdings.map((h) => {
+    const holding: Holding = {
+      ownerId: h.userId,
+      instrumentId: h.instrumentId,
+      containerId: h.containerId,
+      quantity: h.quantity,
+      investedAmount: h.investedAmount,
+      currentValue: h.currentValue,
+      costBasis: h.costBasis,
+      unrealizedGain: h.unrealizedGain,
+      unrealizedGainPercent: h.unrealizedGainPercent,
+      lastUpdated: h.lastUpdated,
+      costBasisStrategy: h.costBasisStrategy,
+      realizedGain: h.realizedGain,
+    };
+    if (h.lastPrice !== undefined) holding.lastPrice = h.lastPrice;
+    return holding;
+  });
+
+  return computePortfolio(
+    domainHoldings,
+    {
+      totalCash,
+      byInstitution: [...byInstitution.entries()].map(
+        ([institution, balance]) => ({ institution, balance }),
+      ),
+    },
+    instrumentDocs.map(toDomainInstrument),
+  );
+}
+
 export const getPortfolio = query({
   args: {
     asOfDate: v.string(),
@@ -441,69 +556,7 @@ export const getPortfolio = query({
   returns: portfolioValidator,
   handler: async (ctx, args) => {
     const user = await getAppUser(ctx);
-    const holdings = await ctx.db
-      .query("holdings")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const instrumentDocs = await ctx.db
-      .query("instruments")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const accounts = await ctx.db
-      .query("accounts")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const balances = await computeBalancesForUser(
-      ctx,
-      user._id,
-      args.asOfDate,
-    );
-
-    let totalCash = 0;
-    const byInstitution = new Map<string, number>();
-    for (const account of accounts) {
-      if (!isLiquidMoneyAccount(account.type)) continue;
-      const balance = balances.get(account._id) ?? 0;
-      totalCash += balance;
-      const institution = account.institution ?? account.name;
-      byInstitution.set(
-        institution,
-        (byInstitution.get(institution) ?? 0) + balance,
-      );
-    }
-
-    const domainHoldings: Holding[] = holdings.map((h) => {
-      const holding: Holding = {
-        ownerId: h.userId,
-        instrumentId: h.instrumentId,
-        containerId: h.containerId,
-        quantity: h.quantity,
-        investedAmount: h.investedAmount,
-        currentValue: h.currentValue,
-        costBasis: h.costBasis,
-        unrealizedGain: h.unrealizedGain,
-        unrealizedGainPercent: h.unrealizedGainPercent,
-        lastUpdated: h.lastUpdated,
-        costBasisStrategy: h.costBasisStrategy,
-        realizedGain: h.realizedGain,
-      };
-      if (h.lastPrice !== undefined) holding.lastPrice = h.lastPrice;
-      return holding;
-    });
-
-    return computePortfolio(
-      domainHoldings,
-      {
-        totalCash,
-        byInstitution: [...byInstitution.entries()].map(
-          ([institution, balance]) => ({ institution, balance }),
-        ),
-      },
-      instrumentDocs.map(toDomainInstrument),
-    );
+    return await computePortfolioForUser(ctx, user._id, args.asOfDate);
   },
 });
 
@@ -535,10 +588,233 @@ const kuveraScheme = v.object({
   lots: v.array(kuveraLot),
 });
 
+export type KuveraSchemeInput = {
+  schemeName: string;
+  isin: string;
+  folio: string;
+  category: string;
+  plan: "direct" | "regular";
+  option: "growth" | "idcw";
+  instrumentExternalKey: string;
+  fundHouse: string;
+  lots: Array<{
+    lotIndex: number;
+    quantity: number;
+    purchase: { date: string; value: number; nav: number };
+    redemption: { date: string; value: number; nav: number };
+    acquisitionValue?: number;
+    purchaseExternalKey: string;
+    redemptionExternalKey: string;
+  }>;
+};
+
+export type UpsertKuveraCapitalGainsArgs = {
+  contentHash: string;
+  sourcePath?: string;
+  periodLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  schemes: KuveraSchemeInput[];
+};
+
 /**
  * Upsert a Kuvera FY capital-gains import into Wealth domain objects.
  * Creates closed-lot purchase+redemption pairs; open holdings often end at zero.
  */
+export async function upsertKuveraCapitalGainsForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  args: UpsertKuveraCapitalGainsArgs,
+): Promise<{
+  documentId: Id<"wealthDocuments">;
+  action: "created" | "unchanged";
+  instrumentsUpserted: number;
+  transactionsUpserted: number;
+  transactionsSkipped: number;
+  holdingsRecomputed: number;
+}> {
+  const existingDoc = await ctx.db
+    .query("wealthDocuments")
+    .withIndex("by_dedupe", (q) =>
+      q
+        .eq("userId", userId)
+        .eq("provider", "kuvera")
+        .eq("statementType", "capital_gains")
+        .eq("contentHash", args.contentHash),
+    )
+    .first();
+
+  if (existingDoc) {
+    return {
+      documentId: existingDoc._id,
+      action: "unchanged" as const,
+      instrumentsUpserted: 0,
+      transactionsUpserted: 0,
+      transactionsSkipped: 0,
+      holdingsRecomputed: 0,
+    };
+  }
+
+  const lotCount = args.schemes.reduce((n, s) => n + s.lots.length, 0);
+
+  const documentRow: {
+    userId: Id<"users">;
+    provider: "kuvera";
+    statementType: "capital_gains";
+    periodLabel: string;
+    periodStart: string;
+    periodEnd: string;
+    contentHash: string;
+    sourcePath?: string;
+    status: string;
+    schemeCount: number;
+    lotCount: number;
+  } = {
+    userId,
+    provider: "kuvera",
+    statementType: "capital_gains",
+    periodLabel: args.periodLabel,
+    periodStart: args.periodStart,
+    periodEnd: args.periodEnd,
+    contentHash: args.contentHash,
+    status: "imported",
+    schemeCount: args.schemes.length,
+    lotCount,
+  };
+  if (args.sourcePath !== undefined) documentRow.sourcePath = args.sourcePath;
+
+  const documentId = await ctx.db.insert("wealthDocuments", documentRow);
+
+  const evidenceId = await ctx.db.insert("wealthEvidence", {
+    userId,
+    sourceType: "broker_statement",
+    documentId,
+    note: `Kuvera capital gains ${args.periodLabel}`,
+    createdAt: Date.now(),
+  });
+
+  let instrumentsUpserted = 0;
+  let transactionsUpserted = 0;
+  let transactionsSkipped = 0;
+  const holdingKeys = new Set<string>();
+
+  for (const scheme of args.schemes) {
+    let instrument = await ctx.db
+      .query("instruments")
+      .withIndex("by_external_key", (q) =>
+        q
+          .eq("userId", userId)
+          .eq("externalKey", scheme.instrumentExternalKey),
+      )
+      .first();
+
+    if (!instrument) {
+      const instrumentId = await ctx.db.insert("instruments", {
+        userId,
+        assetClass: "mutual_fund",
+        name: scheme.schemeName,
+        currency: "INR",
+        provider: scheme.fundHouse,
+        fundHouse: scheme.fundHouse,
+        schemeName: scheme.schemeName,
+        isin: scheme.isin,
+        plan: scheme.plan,
+        option: scheme.option,
+        category: scheme.category,
+        externalKey: scheme.instrumentExternalKey,
+      });
+      instrument = (await ctx.db.get(instrumentId))!;
+      instrumentsUpserted += 1;
+    }
+
+    for (const lot of scheme.lots) {
+      const legs: Array<{
+        type: "purchase" | "redemption";
+        date: string;
+        price: number;
+        amount: number;
+        externalKey: string;
+      }> = [
+        {
+          type: "purchase",
+          date: lot.purchase.date,
+          price: lot.purchase.nav,
+          amount: lot.purchase.value,
+          externalKey: lot.purchaseExternalKey,
+        },
+        {
+          type: "redemption",
+          date: lot.redemption.date,
+          price: lot.redemption.nav,
+          amount: lot.redemption.value,
+          externalKey: lot.redemptionExternalKey,
+        },
+      ];
+
+      for (const leg of legs) {
+        const dup = await ctx.db
+          .query("assetTransactions")
+          .withIndex("by_owner_instrument_external_key", (q) =>
+            q
+              .eq("userId", userId)
+              .eq("instrumentId", instrument!._id)
+              .eq("externalKey", leg.externalKey),
+          )
+          .first();
+
+        if (dup) {
+          assertIdempotentReplay(dup, {
+            containerId: scheme.folio,
+            type: leg.type,
+            date: leg.date,
+            quantity: lot.quantity,
+            price: leg.price,
+            amount: leg.amount,
+          });
+          transactionsSkipped += 1;
+          continue;
+        }
+
+        await ctx.db.insert("assetTransactions", {
+          userId,
+          instrumentId: instrument._id,
+          containerId: scheme.folio,
+          type: leg.type,
+          date: leg.date,
+          quantity: lot.quantity,
+          price: leg.price,
+          amount: leg.amount,
+          evidenceId,
+          sourceType: "broker_statement",
+          externalKey: leg.externalKey,
+        });
+        transactionsUpserted += 1;
+      }
+
+      holdingKeys.add(`${instrument._id}\0${scheme.folio}`);
+    }
+  }
+
+  let holdingsRecomputed = 0;
+  for (const key of holdingKeys) {
+    const [instrumentId, containerId] = key.split("\0") as [
+      Id<"instruments">,
+      string,
+    ];
+    await recomputeHolding(ctx, userId, instrumentId, containerId);
+    holdingsRecomputed += 1;
+  }
+
+  return {
+    documentId,
+    action: "created" as const,
+    instrumentsUpserted,
+    transactionsUpserted,
+    transactionsSkipped,
+    holdingsRecomputed,
+  };
+}
+
 export const upsertKuveraCapitalGains = mutation({
   args: {
     contentHash: v.string(),
@@ -558,186 +834,6 @@ export const upsertKuveraCapitalGains = mutation({
   }),
   handler: async (ctx, args) => {
     const user = await getAppUser(ctx);
-
-    const existingDoc = await ctx.db
-      .query("wealthDocuments")
-      .withIndex("by_dedupe", (q) =>
-        q
-          .eq("userId", user._id)
-          .eq("provider", "kuvera")
-          .eq("statementType", "capital_gains")
-          .eq("contentHash", args.contentHash),
-      )
-      .first();
-
-    if (existingDoc) {
-      return {
-        documentId: existingDoc._id,
-        action: "unchanged" as const,
-        instrumentsUpserted: 0,
-        transactionsUpserted: 0,
-        transactionsSkipped: 0,
-        holdingsRecomputed: 0,
-      };
-    }
-
-    const lotCount = args.schemes.reduce((n, s) => n + s.lots.length, 0);
-
-    const documentRow: {
-      userId: Id<"users">;
-      provider: "kuvera";
-      statementType: "capital_gains";
-      periodLabel: string;
-      periodStart: string;
-      periodEnd: string;
-      contentHash: string;
-      sourcePath?: string;
-      status: string;
-      schemeCount: number;
-      lotCount: number;
-    } = {
-      userId: user._id,
-      provider: "kuvera",
-      statementType: "capital_gains",
-      periodLabel: args.periodLabel,
-      periodStart: args.periodStart,
-      periodEnd: args.periodEnd,
-      contentHash: args.contentHash,
-      status: "imported",
-      schemeCount: args.schemes.length,
-      lotCount,
-    };
-    if (args.sourcePath !== undefined) documentRow.sourcePath = args.sourcePath;
-
-    const documentId = await ctx.db.insert("wealthDocuments", documentRow);
-
-    const evidenceId = await ctx.db.insert("wealthEvidence", {
-      userId: user._id,
-      sourceType: "broker_statement",
-      documentId,
-      note: `Kuvera capital gains ${args.periodLabel}`,
-      createdAt: Date.now(),
-    });
-
-    let instrumentsUpserted = 0;
-    let transactionsUpserted = 0;
-    let transactionsSkipped = 0;
-    const holdingKeys = new Set<string>();
-
-    for (const scheme of args.schemes) {
-      let instrument = await ctx.db
-        .query("instruments")
-        .withIndex("by_external_key", (q) =>
-          q
-            .eq("userId", user._id)
-            .eq("externalKey", scheme.instrumentExternalKey),
-        )
-        .first();
-
-      if (!instrument) {
-        const instrumentId = await ctx.db.insert("instruments", {
-          userId: user._id,
-          assetClass: "mutual_fund",
-          name: scheme.schemeName,
-          currency: "INR",
-          provider: scheme.fundHouse,
-          fundHouse: scheme.fundHouse,
-          schemeName: scheme.schemeName,
-          isin: scheme.isin,
-          plan: scheme.plan,
-          option: scheme.option,
-          category: scheme.category,
-          externalKey: scheme.instrumentExternalKey,
-        });
-        instrument = (await ctx.db.get(instrumentId))!;
-        instrumentsUpserted += 1;
-      }
-
-      for (const lot of scheme.lots) {
-        const legs: Array<{
-          type: "purchase" | "redemption";
-          date: string;
-          price: number;
-          amount: number;
-          externalKey: string;
-        }> = [
-          {
-            type: "purchase",
-            date: lot.purchase.date,
-            price: lot.purchase.nav,
-            amount: lot.purchase.value,
-            externalKey: lot.purchaseExternalKey,
-          },
-          {
-            type: "redemption",
-            date: lot.redemption.date,
-            price: lot.redemption.nav,
-            amount: lot.redemption.value,
-            externalKey: lot.redemptionExternalKey,
-          },
-        ];
-
-        for (const leg of legs) {
-          const dup = await ctx.db
-            .query("assetTransactions")
-            .withIndex("by_owner_instrument_external_key", (q) =>
-              q
-                .eq("userId", user._id)
-                .eq("instrumentId", instrument!._id)
-                .eq("externalKey", leg.externalKey),
-            )
-            .first();
-
-          if (dup) {
-            assertIdempotentReplay(dup, {
-              containerId: scheme.folio,
-              type: leg.type,
-              date: leg.date,
-              quantity: lot.quantity,
-              price: leg.price,
-              amount: leg.amount,
-            });
-            transactionsSkipped += 1;
-            continue;
-          }
-
-          await ctx.db.insert("assetTransactions", {
-            userId: user._id,
-            instrumentId: instrument._id,
-            containerId: scheme.folio,
-            type: leg.type,
-            date: leg.date,
-            quantity: lot.quantity,
-            price: leg.price,
-            amount: leg.amount,
-            evidenceId,
-            sourceType: "broker_statement",
-            externalKey: leg.externalKey,
-          });
-          transactionsUpserted += 1;
-        }
-
-        holdingKeys.add(`${instrument._id}\0${scheme.folio}`);
-      }
-    }
-
-    let holdingsRecomputed = 0;
-    for (const key of holdingKeys) {
-      const [instrumentId, containerId] = key.split("\0") as [
-        Id<"instruments">,
-        string,
-      ];
-      await recomputeHolding(ctx, user._id, instrumentId, containerId);
-      holdingsRecomputed += 1;
-    }
-
-    return {
-      documentId,
-      action: "created" as const,
-      instrumentsUpserted,
-      transactionsUpserted,
-      transactionsSkipped,
-      holdingsRecomputed,
-    };
+    return await upsertKuveraCapitalGainsForUser(ctx, user._id, args);
   },
 });

@@ -64,6 +64,101 @@ function isLinkedTransferOut(
   );
 }
 
+export type SyncedTransferPair = {
+  outId: Id<"transactions">;
+  inId: Id<"transactions">;
+  amount: number;
+  outAccountId: Id<"accounts">;
+  inAccountId: Id<"accounts">;
+  outDate: string;
+  inDate: string;
+  outDescription?: string;
+  inDescription?: string;
+};
+
+export async function syncTransfersForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+): Promise<{ pairs: SyncedTransferPair[] }> {
+  const accounts = await ctx.db
+    .query("accounts")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  const currencyByAccount = new Map(
+    accounts.map((account) => [account._id, account.currency]),
+  );
+
+  const txns = await ctx.db
+    .query("transactions")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+
+  const matchable = txns.flatMap((txn) => {
+    const currency = currencyByAccount.get(txn.accountId);
+    if (currency === undefined) return [];
+    return [
+      {
+        id: txn._id,
+        accountId: txn.accountId,
+        date: txn.date,
+        type: txn.type,
+        amount: txn.amount,
+        currency,
+        ...(txn.direction !== undefined ? { direction: txn.direction } : {}),
+        ...(txn.transferRole !== undefined
+          ? { transferRole: txn.transferRole }
+          : {}),
+        ...(txn.linkedTransactionId !== undefined
+          ? { linkedTransactionId: txn.linkedTransactionId }
+          : {}),
+      },
+    ];
+  });
+
+  const pairs = matchTransferPairs(matchable);
+  const byId = new Map(txns.map((txn) => [txn._id, txn]));
+  const synced: SyncedTransferPair[] = [];
+
+  for (const pair of pairs) {
+    const outId = pair.outId as Id<"transactions">;
+    const inId = pair.inId as Id<"transactions">;
+    const outTxn = byId.get(outId);
+    const inTxn = byId.get(inId);
+    if (!outTxn || !inTxn) continue;
+
+    await linkTransferLeg(ctx, outTxn, {
+      type: "internal_transfer",
+      direction: "debit",
+      transferRole: "out",
+      linkedTransactionId: inId,
+    });
+    await linkTransferLeg(ctx, inTxn, {
+      type: "internal_transfer",
+      direction: "credit",
+      transferRole: "in",
+      linkedTransactionId: outId,
+    });
+
+    const outDescription = pairLabel(outTxn);
+    const inDescription = pairLabel(inTxn);
+
+    synced.push({
+      outId,
+      inId,
+      amount: outTxn.amount,
+      outAccountId: outTxn.accountId,
+      inAccountId: inTxn.accountId,
+      outDate: outTxn.date,
+      inDate: inTxn.date,
+      ...(outDescription !== undefined ? { outDescription } : {}),
+      ...(inDescription !== undefined ? { inDescription } : {}),
+    });
+  }
+
+  return { pairs: synced };
+}
+
 export const syncTransfers = mutation({
   args: {},
   returns: v.object({
@@ -71,83 +166,7 @@ export const syncTransfers = mutation({
   }),
   handler: async (ctx) => {
     const user = await getAppUser(ctx);
-    const accounts = await ctx.db
-      .query("accounts")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const currencyByAccount = new Map(
-      accounts.map((account) => [account._id, account.currency]),
-    );
-
-    const txns = await ctx.db
-      .query("transactions")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const matchable = txns.flatMap((txn) => {
-      const currency = currencyByAccount.get(txn.accountId);
-      if (currency === undefined) return [];
-      return [
-        {
-          id: txn._id,
-          accountId: txn.accountId,
-          date: txn.date,
-          type: txn.type,
-          amount: txn.amount,
-          currency,
-          ...(txn.direction !== undefined ? { direction: txn.direction } : {}),
-          ...(txn.transferRole !== undefined
-            ? { transferRole: txn.transferRole }
-            : {}),
-          ...(txn.linkedTransactionId !== undefined
-            ? { linkedTransactionId: txn.linkedTransactionId }
-            : {}),
-        },
-      ];
-    });
-
-    const pairs = matchTransferPairs(matchable);
-    const byId = new Map(txns.map((txn) => [txn._id, txn]));
-    const synced = [];
-
-    for (const pair of pairs) {
-      const outId = pair.outId as Id<"transactions">;
-      const inId = pair.inId as Id<"transactions">;
-      const outTxn = byId.get(outId);
-      const inTxn = byId.get(inId);
-      if (!outTxn || !inTxn) continue;
-
-      await linkTransferLeg(ctx, outTxn, {
-        type: "internal_transfer",
-        direction: "debit",
-        transferRole: "out",
-        linkedTransactionId: inId,
-      });
-      await linkTransferLeg(ctx, inTxn, {
-        type: "internal_transfer",
-        direction: "credit",
-        transferRole: "in",
-        linkedTransactionId: outId,
-      });
-
-      const outDescription = pairLabel(outTxn);
-      const inDescription = pairLabel(inTxn);
-
-      synced.push({
-        outId,
-        inId,
-        amount: outTxn.amount,
-        outAccountId: outTxn.accountId,
-        inAccountId: inTxn.accountId,
-        outDate: outTxn.date,
-        inDate: inTxn.date,
-        ...(outDescription !== undefined ? { outDescription } : {}),
-        ...(inDescription !== undefined ? { inDescription } : {}),
-      });
-    }
-
-    return { pairs: synced };
+    return await syncTransfersForUser(ctx, user._id);
   },
 });
 
