@@ -202,7 +202,7 @@ export const update = mutation({
       throw new Error("Amount must be greater than zero");
     }
 
-    // Structural edits break transfer pairing — unlink both legs first.
+    // Structural edits break transfer pairing - unlink both legs first.
     if (breaksTransferLink(txn, args)) {
       await unlinkTransferPair(ctx, txn);
     }

@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   const waitingOnSession = isSessionPending && !sessionResolvedRef.current;
 
-  // Only query app user once Convex has a JWT — earlier calls fail as unauthenticated.
+  // Only query app user once Convex has a JWT - earlier calls fail as unauthenticated.
   const convexReady = convexAuthenticated && !convexAuthLoading;
   const appUser = useQuery(
     api.users.me,
@@ -212,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!value) {
         throw new Error("Enter a username or email");
       }
-      // Don't beginHandoff here — keep the login form's in-button pending state
+      // Don't beginHandoff here - keep the login form's in-button pending state
       // during the network round-trip. waitingForAppUser covers post-auth linking.
       const result = looksLikeEmail(value)
         ? await authClient.signIn.email({ email: value, password })
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Stay in loading until Convex JWT is ready and the app user is linked.
   // authHandoff covers the Google redirect gap before BA session exists.
-  // Do NOT block on providers — login form renders immediately; Google button
+  // Do NOT block on providers - login form renders immediately; Google button
   // appears when providersReady (skeleton slot meanwhile).
   const waitingForAppUser =
     hasBetterAuthSession && session === null && !ensureError;

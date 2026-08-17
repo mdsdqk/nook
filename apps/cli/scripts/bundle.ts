@@ -56,7 +56,7 @@ const publishPkg = {
   name: "nook",
   version: "0.1.0",
   description:
-    "Nook CLI — bank statement parsing, wealth import, and Convex auth",
+    "Nook CLI - bank statement parsing, wealth import, and Convex auth",
   type: "module",
   bin: {
     nook: "./nook.js",

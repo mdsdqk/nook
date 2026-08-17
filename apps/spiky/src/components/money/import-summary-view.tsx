@@ -100,7 +100,7 @@ export function ImportSummaryView({ results }: ImportSummaryViewProps) {
 
                 {warnValidation ? (
                   <p className="text-body-sm text-tertiary">
-                    Validation issues found — ledger sync is disabled for this
+                    Validation issues found - ledger sync is disabled for this
                     statement.
                     {result.errors && result.errors.length > 0
                       ? ` ${result.errors.join(" ")}`

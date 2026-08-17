@@ -47,7 +47,7 @@ class MoneyStoreImpl {
   private transactions = cloneTransactions(SEED_TRANSACTIONS);
   private cashFlow = SEED_CASH_FLOW.map((p) => ({ ...p }));
   private listeners = new Set<Listener>();
-  /** Stable reference for useSyncExternalStore — only replaced on mutation. */
+  /** Stable reference for useSyncExternalStore - only replaced on mutation. */
   private snapshot: MoneySnapshot = {
     accounts: this.accounts,
     transactions: this.transactions,

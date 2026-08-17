@@ -15,7 +15,7 @@ export interface HoldingKey {
 }
 
 /**
- * Cost basis strategy — pluggable so tax/lot rules are not baked into Holding.
+ * Cost basis strategy - pluggable so tax/lot rules are not baked into Holding.
  * Only `"average"` is implemented this iteration (typical for Indian MFs).
  */
 export type CostBasisStrategy = "average";
@@ -30,14 +30,14 @@ export interface DeriveHoldingOptions {
   strategy: CostBasisStrategy;
   /**
    * Optional market valuation. When omitted, last transaction price is used
-   * as a provisional stand-in — not live market value. Price discovery
+   * as a provisional stand-in - not live market value. Price discovery
    * (e.g. AMFI NAV) is out of scope for this iteration.
    */
   valuation?: HoldingValuation;
 }
 
 /**
- * Derived ownership position. Never edit directly — recompute from
+ * Derived ownership position. Never edit directly - recompute from
  * AssetTransactions via `deriveHolding`.
  */
 export interface Holding extends HoldingKey {

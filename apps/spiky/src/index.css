@@ -19,7 +19,7 @@
   --color-outline-variant: #494454;
   --color-surface-tint: #d0bcff;
 
-  /* Primary — Electric Purple */
+  /* Primary - Electric Purple */
   --color-primary: #d0bcff;
   --color-on-primary: #3c0091;
   --color-primary-container: #a078ff;
@@ -30,7 +30,7 @@
   --color-on-primary-fixed: #23005c;
   --color-on-primary-fixed-variant: #5516be;
 
-  /* Secondary — Emerald */
+  /* Secondary - Emerald */
   --color-secondary: #4edea3;
   --color-on-secondary: #003824;
   --color-secondary-container: #00a572;
@@ -40,7 +40,7 @@
   --color-on-secondary-fixed: #002113;
   --color-on-secondary-fixed-variant: #005236;
 
-  /* Tertiary — Soft Blue */
+  /* Tertiary - Soft Blue */
   --color-tertiary: #adc6ff;
   --color-on-tertiary: #002e6a;
   --color-tertiary-container: #4d8eff;
@@ -113,7 +113,7 @@
   --text-label-caps--font-weight: 500;
 }
 
-/* Glass elevation — Level 1: cards/containers */
+/* Glass elevation - Level 1: cards/containers */
 @utility glass-1 {
   background-color: rgb(255 255 255 / 0.03);
   border: 1px solid rgb(255 255 255 / 0.08);
@@ -121,7 +121,7 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Glass elevation — Level 2: active/hover with primary glow */
+/* Glass elevation - Level 2: active/hover with primary glow */
 @utility glass-2 {
   background-color: rgb(255 255 255 / 0.05);
   border: 1px solid rgb(255 255 255 / 0.16);
@@ -130,7 +130,7 @@
   box-shadow: 0 0 20px rgb(208 188 255 / 0.15);
 }
 
-/* Glass elevation — floating: modals/tooltips */
+/* Glass elevation - floating: modals/tooltips */
 @utility glass-float {
   background-color: rgb(17 19 23 / 0.85);
   border: 1px solid rgb(255 255 255 / 0.12);
@@ -165,7 +165,7 @@
     border-color: var(--color-outline-variant);
   }
 
-  /* Harden closed native dialogs — author `display:flex` utilities must not
+  /* Harden closed native dialogs - author `display:flex` utilities must not
      override UA hide and paint closed wizards/forms into the page. */
   dialog:not([open]) {
     display: none !important;

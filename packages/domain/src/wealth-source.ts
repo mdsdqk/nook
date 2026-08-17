@@ -1,6 +1,6 @@
 /**
  * Provenance of wealth evidence / asset transactions.
- * Priority is for reconciliation logic only — never persisted on rows.
+ * Priority is for reconciliation logic only - never persisted on rows.
  *
  * Order (highest first): broker_api > broker_statement > cas > manual
  */

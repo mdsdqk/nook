@@ -20,6 +20,11 @@ const GalleryPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import("@/routes/settings/page").then((m) => ({ default: m.SettingsPage })),
 );
+const AssistantsPage = lazy(() =>
+  import("@/routes/assistants/page").then((m) => ({
+    default: m.AssistantsPage,
+  })),
+);
 const OAuthConsentPage = lazy(() =>
   import("@/routes/oauth/consent").then((m) => ({ default: m.OAuthConsentPage })),
 );
@@ -76,6 +81,7 @@ export function App() {
                 element={<Navigate to="/money" replace />}
               />
               <Route path="/money" element={<MoneyPage />} />
+              <Route path="/assistants" element={<AssistantsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>

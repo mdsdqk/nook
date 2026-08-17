@@ -1,15 +1,15 @@
-# Plan: Nook MVP — Full Implementation Plan
+# Plan: Nook MVP - Full Implementation Plan
 
-Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (web), and **Expo** (mobile) in a turborepo. Domain types (account/transaction types) live as **hierarchical type registries in code** — not DB tables. The MVP covers: user onboarding, account management, transactions, balance assertions, cashflow vs. spending differentiation, and a dashboard with time-scoped analytics.
+Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (web), and **Expo** (mobile) in a turborepo. Domain types (account/transaction types) live as **hierarchical type registries in code** - not DB tables. The MVP covers: user onboarding, account management, transactions, balance assertions, cashflow vs. spending differentiation, and a dashboard with time-scoped analytics.
 
 ## Key Decisions
 
-- **Web:** Vite + React + React Router v7 (replacing Next.js — Convex is client-first reactive, no SSR benefit)
+- **Web:** Vite + React + React Router v7 (replacing Next.js - Convex is client-first reactive, no SSR benefit)
 - **Types:** Hierarchical string union + registry in `@nook/domain`. Adding subtypes = one registry entry + one validator update. No DB tables for types.
-- **Auth:** Skipped — username-based lookup, userId in localStorage/AsyncStorage
+- **Auth:** Skipped - username-based lookup, userId in localStorage/AsyncStorage
 - **UI:** shadcn/ui + Tailwind v4 (web), React Native Paper (mobile)
 - **Namespace:** `@nook/*` everywhere
-- **Convex layout:** Function files at `convex/` root (not `convex/src/` — Convex requires this)
+- **Convex layout:** Function files at `convex/` root (not `convex/src/` - Convex requires this)
 
 ---
 
@@ -17,13 +17,13 @@ Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (
 
 | Step | What | Parallel? |
 |------|------|-----------|
-| **0.1** | Fix package naming: `@hf-fos/domain` → `@nook/domain` in `convex/package.json` and `convex/tsconfig.json` | — |
-| **0.2** | Restructure Convex dir: delete `convex/src/`, put files at `convex/` root, create `convex/schema.ts` stub | — |
+| **0.1** | Fix package naming: `@hf-fos/domain` → `@nook/domain` in `convex/package.json` and `convex/tsconfig.json` | - |
+| **0.2** | Restructure Convex dir: delete `convex/src/`, put files at `convex/` root, create `convex/schema.ts` stub | - |
 | **0.3** | Replace Next.js with Vite + React in `apps/web/`: remove Next.js files + `app/` dir, create `index.html`, `vite.config.ts`, `src/main.tsx`, `src/App.tsx`, stub routes under `src/routes/` | Parallel w/ 0.5 |
 | **0.4** | Add shadcn/ui + Tailwind v4 to web: `src/index.css`, `src/lib/utils.ts`, `components.json`, install initial shadcn components | Part of 0.3 |
 | **0.5** | Initialize Expo mobile app with Expo Router, tab layout, `package.json` as `@nook/mobile` | Parallel w/ 0.3 |
-| **0.6** | Create missing `packages/domain/src/index.ts`, stub all domain files | — |
-| **0.7** | Update `turbo.json` for Vite/Expo/Convex dev tasks, update `.gitignore` | — |
+| **0.6** | Create missing `packages/domain/src/index.ts`, stub all domain files | - |
+| **0.7** | Update `turbo.json` for Vite/Expo/Convex dev tasks, update `.gitignore` | - |
 
 **Checkpoint:** `bun install` works, `bun run typecheck` passes, Vite app loads, Expo starts.
 
@@ -37,8 +37,8 @@ Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (
 | **1.2** | Transaction type registry in `transaction.ts` | `TransactionType` union + `TRANSACTION_TYPE_REGISTRY` with `{ label, direction, affectsNetWorth }`. Helper: `requiresDestinationAccount()` |
 | **1.3** | Balance assertion type in `assertion.ts` | `BalanceAssertion`: accountId, date, balance (signed) |
 | **1.4** | Cashflow classification in `cashflow.ts` | `isSpending()` (only expense), `isCashflowOut()` (expense/obligation/transfer), `isCashflowIn()` (income), `classifyForDashboard()`. Spending = irreversible consumption only. |
-| **1.5** | Balance computation in `balance.ts` | `computeAccountBalance(assertions, txns, asOfDate)` — sorts assertions, finds last before date, sums txn deltas after it, snaps to assertion. `computeTransactionEffect(tx, accountId)` — signed amount relative to account. `computeNetWorth()` |
-| **1.6** | Re-export everything from `index.ts` | — |
+| **1.5** | Balance computation in `balance.ts` | `computeAccountBalance(assertions, txns, asOfDate)` - sorts assertions, finds last before date, sums txn deltas after it, snaps to assertion. `computeTransactionEffect(tx, accountId)` - signed amount relative to account. `computeNetWorth()` |
+| **1.6** | Re-export everything from `index.ts` | - |
 
 **Checkpoint:** Typecheck passes. Unit tests for balance computation (assertion snapping, backdated txns, gaps).
 
@@ -48,18 +48,18 @@ Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (
 
 | Step | What | File |
 |------|------|------|
-| **2.1** | Schema: 4 tables (`users`, `accounts`, `transactions`, `balanceAssertions`) with indexes. Type fields use `v.union(v.literal(...))` — extending later = add one literal. | `convex/schema.ts` |
+| **2.1** | Schema: 4 tables (`users`, `accounts`, `transactions`, `balanceAssertions`) with indexes. Type fields use `v.union(v.literal(...))` - extending later = add one literal. | `convex/schema.ts` |
 | **2.2** | User functions: `create` (uniqueness check), `getByUsername`, `get` | `convex/users.ts` |
 | **2.3** | Account CRUD: `create` (with optional initial balance assertion), `list` (with computed balances), `get` (detail), `update`, `remove` | `convex/accounts.ts` |
 | **2.4** | Transaction CRUD: `create` (validation: amount>0, transfer needs toAccountId, backdating OK), `list` (filters: date range, account, type), `get`, `remove` | `convex/transactions.ts` |
 | **2.5** | Balance assertions: `assert` (upsert for account+date), `list` (sorted by date) | `convex/assertions.ts` |
-| **2.6** | Dashboard queries: `summary` (totals, spending by category, net worth), `cashflowTimeline` (bucketed by daily/weekly/monthly) — uses `@nook/domain` for classification | `convex/dashboard.ts` |
+| **2.6** | Dashboard queries: `summary` (totals, spending by category, net worth), `cashflowTimeline` (bucketed by daily/weekly/monthly) - uses `@nook/domain` for classification | `convex/dashboard.ts` |
 
 **Checkpoint:** `convex dev` deploys. Test via Convex dashboard UI: full user flow.
 
 ---
 
-## Phase 3: Web — Wiring & Onboarding
+## Phase 3: Web - Wiring & Onboarding
 
 | Step | What |
 |------|------|
@@ -71,7 +71,7 @@ Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (
 
 ---
 
-## Phase 4: Web — Core Features (parallel with Phase 5)
+## Phase 4: Web - Core Features (parallel with Phase 5)
 
 | Step | What |
 |------|------|
@@ -82,7 +82,7 @@ Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (
 
 ---
 
-## Phase 5: Mobile (Expo) — parallel with Phase 4
+## Phase 5: Mobile (Expo) - parallel with Phase 4
 
 | Step | What |
 |------|------|
@@ -90,7 +90,7 @@ Build the Nook MVP using **Convex** (backend), **Vite + React + React Router** (
 | **5.2** | Dashboard tab (summary cards + time scope), Accounts tab (FlatList + FAB), Add Transaction tab |
 | **5.3** | Account detail, transaction list with filters |
 
-**Mobile and web share the same Convex backend — real-time sync.**
+**Mobile and web share the same Convex backend - real-time sync.**
 
 ---
 
@@ -123,6 +123,6 @@ Phase 3 (web wiring)  ──┬── Phase 5 (mobile)
 Phase 4 (web features) ──┘  → commit
 ```
 
-Phases 4 and 5 run in parallel — same backend, different UIs. Each phase is independently verifiable before moving on.
+Phases 4 and 5 run in parallel - same backend, different UIs. Each phase is independently verifiable before moving on.
 
 ---

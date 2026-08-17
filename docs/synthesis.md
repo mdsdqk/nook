@@ -49,7 +49,7 @@ Violation = system error.
 **(This replaces the old “Time-Aware Ledger Model” – the new foundation)**
 
 #### 3.1 Core Acceptance  
-The system might **never** have a complete or deterministic ledger of reality — and that is intentional and kind. Users forget, batch-enter, overwrite balances, and partially backfill. Completeness is never guaranteed.
+The system might **never** have a complete or deterministic ledger of reality - and that is intentional and kind. Users forget, batch-enter, overwrite balances, and partially backfill. Completeness is never guaranteed.
 
 #### 3.2 Two Kinds of Truth (Both User Assertions)  
 1. **State Truths** – Balance Assertions  
@@ -91,9 +91,9 @@ This model eliminates backdated confusion forever.
 
 Each ledger transaction carries three independent fields:
 
-- **`direction`** — objective money movement relative to the account: `credit` | `debit` (from the statement source).
-- **`type`** — finite financial meaning owned by the product (e.g. Salary, Expense, Internal Transfer, EMI Payment, Investment Purchase). See `@nook/domain` `TRANSACTION_TYPE_REGISTRY`.
-- **`category`** (optional) — free-form budgeting / reporting label (Food, Groceries, Travel, …). Not part of the financial type model; users may create and rename categories freely.
+- **`direction`** - objective money movement relative to the account: `credit` | `debit` (from the statement source).
+- **`type`** - finite financial meaning owned by the product (e.g. Salary, Expense, Internal Transfer, EMI Payment, Investment Purchase). See `@nook/domain` `TRANSACTION_TYPE_REGISTRY`.
+- **`category`** (optional) - free-form budgeting / reporting label (Food, Groceries, Travel, …). Not part of the financial type model; users may create and rename categories freely.
 
 Lifestyle spending is only `type === expense` (optionally with a category). Transfers, investments, debt payments, insurance premiums, and fees are not lifestyle spending.
 
@@ -160,7 +160,7 @@ Five pillars:
 4. Net Worth Direction  
 5. Optionality  
 
-The system **answers questions** — it never issues commands.
+The system **answers questions** - it never issues commands.
 
 ### 21. System Invariants (Must Always Hold)
 
@@ -184,7 +184,7 @@ nook is successful when:
 
 ### Closing Note
 
-This specification defines a system that remains **correct under time, stress, complexity, and growth** — not because it tracks everything, but because it tracks **only what matters, in the right way, at the right time**.  
+This specification defines a system that remains **correct under time, stress, complexity, and growth** - not because it tracks everything, but because it tracks **only what matters, in the right way, at the right time**.  
 
 **One sentence that locks everything in**:  
 **Balances are truths the user declares. Transactions are stories that try to explain them.**

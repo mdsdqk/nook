@@ -51,7 +51,16 @@ export function RequireAuth() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const target = sanitizeAppPath(
+      `${location.pathname}${location.search}`,
+      "/dashboard",
+    );
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(target)}`}
+        replace
+      />
+    );
   }
 
   return <Outlet />;

@@ -16,7 +16,7 @@ Evidence  →  Instrument  →  AssetTransaction  →  Holding  →  computePort
 | **Holding** | Materialized derived position. Recomputed only by mutations that write AssetTransactions. |
 | **Portfolio** | Not an entity. Pure computation (`computePortfolio`), like `computeNetWorth`. |
 
-Money owns cash (accounts, assertions, bank transactions). Wealth **consumes** liquid balances read-only. One direction only — Wealth must not become a second cash ledger.
+Money owns cash (accounts, assertions, bank transactions). Wealth **consumes** liquid balances read-only. One direction only - Wealth must not become a second cash ledger.
 
 ## Instrument vs Holding
 
@@ -98,9 +98,9 @@ Returns totals and allocations by asset class / provider / category. Liquid cash
 
 ## Manual evidence path
 
-1. `wealth.createManualInstrument` — catalog entry (+ evidence note). Does not create a Holding.
-2. `wealth.recordManualAssetTransaction` — evidence → AssetTransaction → recompute Holding.
-3. `wealth.linkBankTransaction` — optional link only; no holding math change.
+1. `wealth.createManualInstrument` - catalog entry (+ evidence note). Does not create a Holding.
+2. `wealth.recordManualAssetTransaction` - evidence → AssetTransaction → recompute Holding.
+3. `wealth.linkBankTransaction` - optional link only; no holding math change.
 
 Queries: `listInstruments`, `listHoldings`, `getPortfolio`.
 
@@ -124,7 +124,7 @@ Each CG row is a **closed FIFO lot** (purchase + redemption). Importing CG alone
 
 Import envelope: `wealthDocuments` (contentHash dedupe) + `wealthEvidence` + Instruments + AssetTransactions.
 
-Fixtures under `packages/parsers/src/__tests__/fixtures/kuvera/` are **anonymized** — never commit real `sample_data/` statements.
+Fixtures under `packages/parsers/src/__tests__/fixtures/kuvera/` are **anonymized** - never commit real `sample_data/` statements.
 
 ## Design rules
 
@@ -142,7 +142,7 @@ Fixtures under `packages/parsers/src/__tests__/fixtures/kuvera/` are **anonymize
 
 ## Extending to a new asset class
 
-1. Add a discriminated instrument type (e.g. `StockInstrument`) — no metadata bag.
+1. Add a discriminated instrument type (e.g. `StockInstrument`) - no metadata bag.
 2. Reuse or extend economic `AssetTransactionType`s as needed.
 3. Add cost-basis strategy if required (e.g. FIFO for equity).
 4. Wire ingest evidence → AssetTransactions → holding recompute.

@@ -65,7 +65,7 @@ export async function syncStatementToLedger(
     });
     account = (await ctx.db.get(accountId))!;
 
-    // TOCTOU: concurrent inserts may create duplicates — keep oldest.
+    // TOCTOU: concurrent inserts may create duplicates - keep oldest.
     const peers = await ctx.db
       .query("accounts")
       .withIndex("by_fingerprint", (q) =>

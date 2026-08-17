@@ -24,7 +24,12 @@ describe("sanitizeAppPath", () => {
     expect(sanitizeAppPath("/ok\n/evil")).toBe("/dashboard");
   });
 
-  it("supports a custom fallback", () => {
-    expect(sanitizeAppPath("//x", "/login")).toBe("/login");
+  it("keeps Assistants and consent deep links", () => {
+    expect(sanitizeAppPath("/assistants")).toBe("/assistants");
+    expect(
+      sanitizeAppPath(
+        "/oauth/consent?client_id=x&redirect_uri=https%3A%2F%2Fx",
+      ),
+    ).toMatch(/^\/oauth\/consent\?/);
   });
 });

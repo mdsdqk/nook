@@ -10,7 +10,7 @@ const program = new Command();
 
 program
   .name("nook")
-  .description("Nook CLI — bank statements, wealth import, and auth")
+  .description("Nook CLI - bank statements, wealth import, and auth")
   .version("0.1.0");
 
 const statement = new Command("statement").description(

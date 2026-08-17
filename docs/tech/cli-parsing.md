@@ -1,4 +1,4 @@
-# Technical Specification — Statement Parsing CLI (v0.1)
+# Technical Specification - Statement Parsing CLI (v0.1)
 
 ## Overview
 
@@ -485,7 +485,7 @@ bun run statement parse statement.pdf --convex
 bun run statement parse statement.pdf --sync-ledger
 ```
 
-Username `--user` is no longer supported — identity comes from the logged-in session.
+Username `--user` is no longer supported - identity comes from the logged-in session.
 
 ## Parse
 

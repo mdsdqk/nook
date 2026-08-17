@@ -170,7 +170,7 @@ export class Kotak811SavingsParser implements StatementParser {
 
       if (!inHistory) continue;
 
-      // Per-page footer — history may continue on later pages.
+      // Per-page footer - history may continue on later pages.
       if (/^Statement\s+Generated\s+on/i.test(trimmed)) {
         continue;
       }

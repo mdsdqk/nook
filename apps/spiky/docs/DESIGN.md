@@ -105,7 +105,7 @@ spacing:
 
 ## Brand & Style
 
-The design system is centered on the concept of "Financial Sentience"—a UI that feels alive, observant, and supportive. It targets a modern audience that views personal finance not as a chore, but as an evolving ecosystem managed by "Agentic AI."
+The design system is centered on the concept of "Financial Sentience"-a UI that feels alive, observant, and supportive. It targets a modern audience that views personal finance not as a chore, but as an evolving ecosystem managed by "Agentic AI."
 
 The visual style is a blend of **Minimalism** and **Glassmorphism**, set against a deep, ink-like dark mode. By utilizing translucent layers, vibrant accent glows, and precise typography, the system creates an atmosphere of high-end, futuristic sophistication. The emotional response is one of calm control, clarity, and technological empowerment.
 

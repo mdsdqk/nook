@@ -148,7 +148,7 @@ export default defineSchema({
     .index("by_user_class", ["userId", "assetClass"])
     .index("by_external_key", ["userId", "externalKey"]),
 
-  // Thin provenance only — no payload blob. Evidence never updates Holdings.
+  // Thin provenance only - no payload blob. Evidence never updates Holdings.
   wealthEvidence: defineTable({
     userId: v.id("users"),
     sourceType: v.union(
@@ -195,7 +195,7 @@ export default defineSchema({
       "externalKey",
     ]),
 
-  // Materialized derived state. Never patch from clients — recompute only.
+  // Materialized derived state. Never patch from clients - recompute only.
   // lastPrice/currentValue are provisional (last known price; price discovery OOS).
   holdings: defineTable({
     userId: v.id("users"),

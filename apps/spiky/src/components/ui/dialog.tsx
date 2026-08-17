@@ -82,7 +82,7 @@ export function Dialog({
     <dialog
       ref={dialogRef}
       className={cn(
-        // Width/height only here — never set bare display utilities.
+        // Width/height only here - never set bare display utilities.
         // `open:flex` is appended last so caller className cannot revive the
         // closed-dialog paint bug via a stray `flex`.
         "m-auto max-h-[min(100dvh-2rem,100%)] w-[min(100%-2rem,28rem)] overflow-hidden rounded-lg border border-white/10 bg-surface-container-low p-0 text-on-surface shadow-2xl backdrop:bg-black/60",

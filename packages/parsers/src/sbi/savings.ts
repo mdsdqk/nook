@@ -132,7 +132,7 @@ export class SbiSavingsParser implements StatementParser {
   private extractClosingBalance(doc: ParsedDocument): number | null {
     const text = this.normalizeText(doc.rawText);
 
-    // Prefer statement-summary closing — Clear Balance is often the live
+    // Prefer statement-summary closing - Clear Balance is often the live
     // ledger balance at PDF generation time, not the period end.
     const values = text.match(
       /([\d,]+\.\d{2})\s*CR\s+\d+\s+\d+\s+[\d,]+\.\d{2}\s+[\d,]+\.\d{2}\s+([\d,]+\.\d{2})\s*CR/i,
@@ -174,7 +174,7 @@ export class SbiSavingsParser implements StatementParser {
 
       if (!inHistory) continue;
 
-      // Page breaks — keep scanning; history continues on next page.
+      // Page breaks - keep scanning; history continues on next page.
       if (/^Page\s+no\.\s*\d+/i.test(trimmed)) {
         continue;
       }

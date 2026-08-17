@@ -187,7 +187,7 @@ export function TransactionFormDialog({
             className="rounded-md border border-tertiary/30 bg-tertiary/10 px-3 py-2 text-body-sm text-on-surface/80"
             role="status"
           >
-            Linked transfer — editing account, type, direction, or amount (or
+            Linked transfer - editing account, type, direction, or amount (or
             deleting) will affect the paired transaction.
           </p>
         ) : null}

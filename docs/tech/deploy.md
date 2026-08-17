@@ -57,9 +57,10 @@ Two projects on the same monorepo. Each app has a `vercel.json` with Bun install
 
 Spiky production env (build-time, Vite-inlined):
 
-- `VITE_CONVEX_URL` — prod `.cloud` URL
-- `VITE_CONVEX_SITE_URL` — prod `.site` URL
-- `VITE_SITE_URL` — same origin as Convex `SITE_URL` (e.g. `https://spiky.nook.com`)
+- `VITE_CONVEX_URL` - prod `.cloud` URL
+- `VITE_CONVEX_SITE_URL` - prod `.site` URL
+- `VITE_SITE_URL` - same origin as Convex `SITE_URL` (e.g. `https://spiky.nook.com`)
+- `VITE_MCP_URL` - public HTTPS MCP origin (Railway), no trailing slash; used by `/oauth/consent` approve and Spiky **Assistants** (`/assistants`)
 
 Create projects (CLI or dashboard):
 
@@ -70,6 +71,7 @@ bunx vercel link --cwd apps/web     # create/link web project
 bunx vercel env add VITE_CONVEX_URL --cwd apps/spiky
 bunx vercel env add VITE_CONVEX_SITE_URL --cwd apps/spiky
 bunx vercel env add VITE_SITE_URL --cwd apps/spiky
+bunx vercel env add VITE_MCP_URL --cwd apps/spiky
 bunx vercel deploy --prod --cwd apps/spiky
 bunx vercel deploy --prod --cwd apps/web
 ```
@@ -80,7 +82,7 @@ Keep Spiky unadvertised: no marketing links from web.
 
 ## CLI (`nook` on npm)
 
-Publishable package name is **`nook`** (workspace package remains `@nook/cli`). One fat bundle — workspace `@nook/*` packages are not published separately.
+Publishable package name is **`nook`** (workspace package remains `@nook/cli`). One fat bundle - workspace `@nook/*` packages are not published separately.
 
 ```sh
 # from repo root

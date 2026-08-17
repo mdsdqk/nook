@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { useMutation } from "convex/react";
+import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { api } from "@nook/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { easeOutSoft, fadeUp } from "@/lib/motion";
 
 type SettingsSectionId =
   | "profile"
+  | "assistants"
   | "connected"
   | "api-keys"
   | "ai-providers"
@@ -23,6 +25,7 @@ const sections: {
   live?: boolean;
 }[] = [
   { id: "profile", label: "Profile", live: true },
+  { id: "assistants", label: "Assistants", live: true },
   { id: "connected", label: "Connected accounts" },
   { id: "api-keys", label: "API keys" },
   { id: "ai-providers", label: "AI providers" },
@@ -31,8 +34,17 @@ const sections: {
 
 export function SettingsPage() {
   const [active, setActive] = useState<SettingsSectionId>("profile");
+  const navigate = useNavigate();
   const navId = useId();
   const reduceMotion = useReducedMotion();
+
+  function selectSection(id: SettingsSectionId) {
+    if (id === "assistants") {
+      void navigate("/assistants");
+      return;
+    }
+    setActive(id);
+  }
 
   return (
     <>
@@ -50,7 +62,7 @@ export function SettingsPage() {
             <button
               key={section.id}
               type="button"
-              onClick={() => setActive(section.id)}
+              onClick={() => selectSection(section.id)}
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-body-sm transition-colors",
                 active === section.id
@@ -77,7 +89,7 @@ export function SettingsPage() {
               <button
                 key={section.id}
                 type="button"
-                onClick={() => setActive(section.id)}
+                onClick={() => selectSection(section.id)}
                 className={cn(
                   "shrink-0 rounded-md px-3 py-2 text-body-sm transition-colors",
                   active === section.id

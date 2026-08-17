@@ -6,7 +6,7 @@ type Ctx = QueryCtx | MutationCtx;
 
 /**
  * Resolve the app user for an MCP access token.
- * Expiry uses Convex server time — never trust client-supplied `now`.
+ * Expiry uses Convex server time - never trust client-supplied `now`.
  */
 export async function requireMcpUser(
   ctx: Ctx,

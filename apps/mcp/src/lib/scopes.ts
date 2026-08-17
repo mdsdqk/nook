@@ -1,6 +1,6 @@
 import type { AuthUser } from "./convex";
 
-/** OAuth scope intersection — never widen on empty/invalid requested scopes. */
+/** OAuth scope intersection - never widen on empty/invalid requested scopes. */
 
 export const SUPPORTED_SCOPES = ["nook.read", "nook.write"] as const;
 

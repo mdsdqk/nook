@@ -23,7 +23,7 @@ import type {
  * Narration prefix (short name) appears on the line before the dated row;
  * UPI remarks wrap onto lines after. Withdrawal vs deposit columns are not
  * reliably separated in extracted text, so direction is inferred from the
- * running balance delta. Opening balance is not printed — derived from the
+ * running balance delta. Opening balance is not printed - derived from the
  * first transaction amount and balance (first txn treated via delta).
  */
 

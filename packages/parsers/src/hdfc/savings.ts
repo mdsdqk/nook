@@ -171,7 +171,7 @@ export class HdfcSavingsParser implements StatementParser {
     line: TextLine,
     _page: DocumentPage,
   ): RawTxn {
-    // Single-span lines — parse from text using regex
+    // Single-span lines - parse from text using regex
     const text = line.text.trim();
 
     // Extract date (first DD/MM/YY)
@@ -205,7 +205,7 @@ export class HdfcSavingsParser implements StatementParser {
       amounts.length >= 2 ? amounts[amounts.length - 2]!.value : 0;
 
     // Narration is everything between date and the ref/valueDate area
-    // Find where ref number starts — it's typically an alphanumeric token before valueDate
+    // Find where ref number starts - it's typically an alphanumeric token before valueDate
     let narration = "";
     let ref = "";
 

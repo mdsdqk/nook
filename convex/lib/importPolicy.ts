@@ -1,7 +1,7 @@
 import { HOUR } from "@convex-dev/rate-limiter";
 import type { Doc } from "../_generated/dataModel";
 
-/** Soft defaults — Spiky client mirrors these. */
+/** Soft defaults - Spiky client mirrors these. */
 export const DEFAULT_IMPORT_POLICY: ImportPolicy = {
   maxImportsPerHour: 5,
   maxFilesPerBatch: 5,

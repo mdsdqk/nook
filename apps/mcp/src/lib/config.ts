@@ -56,7 +56,7 @@ export const config = {
     "http://127.0.0.1:5174",
   ).replace(/\/$/, ""),
   convexUrl: () => required("CONVEX_URL"),
-  /** Better Auth HTTP site (`.convex.site`) — used to exchange Spiky session tokens. */
+  /** Better Auth HTTP site (`.convex.site`) - used to exchange Spiky session tokens. */
   convexSiteUrl: () => {
     const fromEnv = process.env["CONVEX_SITE_URL"]?.replace(/\/$/, "");
     if (fromEnv) return fromEnv;

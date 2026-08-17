@@ -74,7 +74,7 @@ export function GalleryPage() {
             Spike
           </h1>
           <p className="mt-stack-sm max-w-xl text-body-base text-on-surface/60">
-            Financial Sentience — a glassmorphic dark system for agentic AI
+            Financial Sentience - a glassmorphic dark system for agentic AI
             finance experiences.
           </p>
         </header>
@@ -257,7 +257,7 @@ export function GalleryPage() {
                         </p>
                         <p className="mt-1 text-body-sm text-on-surface/60">
                           Compared to your 4-week average. Emerald trend
-                          detected — keep the streak going.
+                          detected - keep the streak going.
                         </p>
                         <div className="mt-stack-sm flex gap-2">
                           <Chip variant="secondary">−18%</Chip>
