@@ -78,7 +78,7 @@ export async function fetchConvexJwt(
   return data.token;
 }
 
-/** ConvexHttpClient only accepts a string JWT — refresh before each use. */
+/** ConvexHttpClient only accepts a string JWT - refresh before each use. */
 export async function createAuthedConvexClient(): Promise<{
   client: ConvexHttpClient;
   credentials: NookCredentials;

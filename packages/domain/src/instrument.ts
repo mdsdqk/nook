@@ -2,7 +2,7 @@
  * Instrument catalog types.
  *
  * Domain types are catalog-neutral (no userId). Persistence may attach userId
- * this iteration as a convenience — long-term instruments belong in a shared
+ * this iteration as a convenience - long-term instruments belong in a shared
  * catalog; users own Holdings, not Instruments.
  */
 
@@ -28,7 +28,7 @@ export interface MutualFundInstrument {
   category?: string;
 }
 
-/** Discriminated instrument union — extend per asset class, not via a metadata bag. */
+/** Discriminated instrument union - extend per asset class, not via a metadata bag. */
 export type Instrument = MutualFundInstrument;
 
 export interface AssetClassMeta {

@@ -12,6 +12,7 @@ import { easeOutFast, fadeIn } from "@/lib/motion";
 
 const PAGE_TITLES: Record<string, string> = {
   "/money": "Money",
+  "/assistants": "Assistants",
   "/settings": "Settings",
   "/dashboard": "Dashboard",
 };

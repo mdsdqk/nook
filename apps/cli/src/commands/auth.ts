@@ -170,7 +170,7 @@ async function runBrowserLogin(
         return;
       }
 
-      // Reject without aborting login — a stray/malicious local POST must not
+      // Reject without aborting login - a stray/malicious local POST must not
       // DoS the wait (only timeout or a valid nonce+payload should settle).
       if (!cors) {
         res.writeHead(403, {

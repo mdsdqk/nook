@@ -13,7 +13,7 @@ import {
   type ImportPolicy,
 } from "./lib/importPolicy";
 
-/** Unnamed limits — always pass inline `config` so overrides apply. */
+/** Unnamed limits - always pass inline `config` so overrides apply. */
 export const importRateLimiter = new RateLimiter(components.rateLimiter);
 
 export async function getImportPolicyForUser(

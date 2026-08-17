@@ -1,6 +1,6 @@
 /**
  * Wealth capital-gains statement IR (Kuvera FY CG and similar).
- * Not a bank ParsedStatement — investment evidence only.
+ * Not a bank ParsedStatement - investment evidence only.
  */
 
 export type WealthProvider = "kuvera";
@@ -49,7 +49,7 @@ export interface ParsedWealthScheme {
 
 /**
  * Parsed Kuvera (or similar) capital-gains statement.
- * Omits PII (name, PAN) by design — never persist those fields.
+ * Omits PII (name, PAN) by design - never persist those fields.
  */
 export interface ParsedWealthCapitalGains {
   provider: WealthProvider;

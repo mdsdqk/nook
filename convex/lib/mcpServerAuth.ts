@@ -2,7 +2,7 @@
  * Shared secret between apps/mcp and Convex mcpOauth/mcpApi.
  * Set the same value via MCP process env and `bunx convex env set MCP_SERVER_SECRET`.
  *
- * Uses Web Crypto (Convex default runtime) — do not import `node:crypto` here.
+ * Uses Web Crypto (Convex default runtime) - do not import `node:crypto` here.
  */
 export async function assertMcpServerSecret(
   serverSecret: string,

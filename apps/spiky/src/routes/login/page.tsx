@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { RedirectIfAuthed } from "@/components/require-auth";
@@ -34,12 +36,16 @@ function LoginForm() {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [assistantsDialogOpen, setAssistantsDialogOpen] = useState(false);
   const reduceMotion = useReducedMotion();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const redirectTo = sanitizeAppPath(
-    new URLSearchParams(window.location.search).get("redirect"),
+    searchParams.get("redirect"),
     "/dashboard",
   );
+  const assistantsRedirectArmed = redirectTo === "/assistants";
 
   const title = mode === "signin" ? "Sign in" : "Sign up";
   const subtitle =
@@ -316,8 +322,61 @@ function LoginForm() {
               ? "Need an account? Sign up"
               : "Already have an account? Sign in"}
           </button>
+
+          {assistantsRedirectArmed ? (
+            <p className="text-center text-body-sm text-on-surface/50">
+              After sign-in you’ll open Assistants.{" "}
+              <button
+                type="button"
+                className="underline-offset-2 hover:text-on-surface/70 hover:underline"
+                onClick={() => {
+                  void navigate("/login", { replace: true });
+                }}
+              >
+                Undo
+              </button>
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="text-center text-body-sm text-on-surface/40 underline-offset-2 hover:text-on-surface/60 hover:underline"
+              onClick={() => setAssistantsDialogOpen(true)}
+            >
+              Let your AI talk to Nook
+            </button>
+          )}
         </div>
       </motion.div>
+
+      <Dialog
+        open={assistantsDialogOpen}
+        onOpenChange={setAssistantsDialogOpen}
+        title="Let your AI talk to Nook"
+      >
+        <p className="text-body-sm leading-relaxed text-on-surface/65">
+          Sign in and we’ll show you how to link Claude or ChatGPT. Then you
+          can ask about your money from your preferred Chat Assistant - spending, balances, and
+          what you own.
+        </p>
+        <div className="mt-stack-md flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setAssistantsDialogOpen(false)}
+          >
+            Not now
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              void navigate("/login?redirect=/assistants", { replace: true });
+              setAssistantsDialogOpen(false);
+            }}
+          >
+            Continue
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

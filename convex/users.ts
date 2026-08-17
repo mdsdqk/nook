@@ -59,7 +59,7 @@ export const ensureCurrentUser = mutation({
       .unique();
 
     if (existing) {
-      // Never clobber a user-edited name/username — only fill empties / sync email+image.
+      // Never clobber a user-edited name/username - only fill empties / sync email+image.
       const patch: {
         email?: string;
         name?: string;

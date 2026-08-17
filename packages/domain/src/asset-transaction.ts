@@ -1,7 +1,7 @@
 import type { WealthSourceType } from "./wealth-source";
 
 /**
- * Economic event types for asset ownership — not execution mechanisms.
+ * Economic event types for asset ownership - not execution mechanisms.
  * SIP / STP / SWP are `executionType`, not separate types.
  */
 export type AssetTransactionType =

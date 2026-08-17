@@ -10,7 +10,15 @@ Nook exposes statement ingest + ledger/wealth tools over **Streamable HTTP** so 
 | `apps/spiky` | Login + `/oauth/consent` UI (swap to `apps/web` later via `AUTH_UI_PUBLIC_URL`) |
 | `convex` | Users, ledger, wealth, MCP OAuth clients/codes/tokens |
 
-Identity lives in Convex. Spiky is only the browser consent host — not the source of truth.
+Identity lives in Convex. Spiky is only the browser consent host - not the source of truth.
+
+## In-app Assistants (Spiky)
+
+Signed-in users get a connect recipe at **`/assistants`** (primary nav **Assistants**, also linked from Settings → Assistants and a quiet login footnote).
+
+- Shows `VITE_MCP_URL` + `/mcp` with copy (errors if `VITE_MCP_URL` is unset - no silent localhost fallback on that page).
+- Claude / ChatGPT custom-connector steps; leave OAuth client id/secret blank (DCR).
+- Production Spiky (Vercel) must set `VITE_MCP_URL` to the public HTTPS MCP origin (same host used for consent approve).
 
 ## Local run
 
@@ -46,10 +54,16 @@ Health: `GET http://127.0.0.1:8787/health`
 
 ## Connect Claude / ChatGPT
 
-1. Sign in to Spiky (Better Auth — Google or username/email).
-2. In Claude: **Settings → Connectors → Add custom connector** (or ChatGPT custom MCP) → URL `https://<mcp-host>/mcp`.
-3. Browser opens Spiky `/oauth/consent` (skips login if already signed in).
-4. Click **Allow access** → MCP verifies the Better Auth session token, mints an auth code → return to the assistant → tools appear.
+Preferred path for humans: Spiky **Assistants** (`/assistants`) - copy the MCP URL and follow the steps there.
+
+Operator checklist:
+
+1. Sign in to Spiky (Better Auth - Google or username/email).
+2. Open **Assistants** (or Settings → Assistants).
+3. In Claude: **Settings → Connectors → Add custom connector** (or ChatGPT custom MCP) → paste `https://<mcp-host>/mcp`.
+4. Leave OAuth Client ID / Secret blank.
+5. Browser opens Spiky `/oauth/consent` (skips login if already signed in).
+6. Click **Allow access** → MCP verifies the Better Auth session token, mints an auth code → return to the assistant → tools appear.
 
 OAuth endpoints (discovery):
 
@@ -64,9 +78,9 @@ OAuth endpoints (discovery):
 
 **Ingest (always persist)**
 
-- `detect_statement` — detect only (no write)
-- `parse_statement` — parse → Convex upsert → ledger sync
-- `parse_wealth_kuvera` — Kuvera XLSX → Convex wealth upsert
+- `detect_statement` - detect only (no write)
+- `parse_statement` - parse → Convex upsert → ledger sync
+- `parse_wealth_kuvera` - Kuvera XLSX → Convex wealth upsert
 
 File inputs: `filename` + `fileBase64` **or** `fileUrl`.
 
@@ -92,20 +106,20 @@ Dockerfile: [`apps/mcp/Dockerfile`](../../apps/mcp/Dockerfile), Railway config: 
 Required env on the service:
 
 - `CONVEX_URL`
-- `CONVEX_SITE_URL` — Better Auth HTTP origin (`.convex.site`); used to exchange Spiky session tokens on `/approve`
-- `MCP_PUBLIC_URL` — public HTTPS origin of the MCP service (no trailing slash)
-- `AUTH_UI_PUBLIC_URL` — public Spiky (or future web) origin
-- `MCP_CONSENT_SECRET` — long random secret used to HMAC consent tickets (required in production)
-- `MCP_SERVER_SECRET` — shared with Convex (`bunx convex env set MCP_SERVER_SECRET`); gates `mcpOauth` / `mcpApi` calls
-- `PORT` — usually set by Railway (`8787` in Dockerfile)
+- `CONVEX_SITE_URL` - Better Auth HTTP origin (`.convex.site`); used to exchange Spiky session tokens on `/approve`
+- `MCP_PUBLIC_URL` - public HTTPS origin of the MCP service (no trailing slash)
+- `AUTH_UI_PUBLIC_URL` - public Spiky (or future web) origin
+- `MCP_CONSENT_SECRET` - long random secret used to HMAC consent tickets (required in production)
+- `MCP_SERVER_SECRET` - shared with Convex (`bunx convex env set MCP_SERVER_SECRET`); gates `mcpOauth` / `mcpApi` calls
+- `PORT` - usually set by Railway (`8787` in Dockerfile)
 
 Optional:
 
-- `MCP_DCR_SHARED_SECRET` — when set, `POST /register` requires `Authorization: Bearer <secret>`
-- `MCP_ALLOW_OPEN_DCR` — default `false`; set `true` only for local unauthenticated DCR (also enables a fixed dev `MCP_SERVER_SECRET` fallback)
+- `MCP_DCR_SHARED_SECRET` - when set, `POST /register` requires `Authorization: Bearer <secret>`
+- `MCP_ALLOW_OPEN_DCR` - default `false`; set `true` only for local unauthenticated DCR (also enables a fixed dev `MCP_SERVER_SECRET` fallback)
 - `MCP_REFRESH_TOKEN_TTL_SEC`, `MCP_ACCESS_TOKEN_TTL_SEC`, `MCP_AUTH_CODE_TTL_SEC`
 - `MCP_RATE_LIMIT_MAX` / `MCP_RATE_LIMIT_WINDOW_MS`
-- `MCP_ALLOW_LOCALHOST_REDIRECTS` — default `true` for local Claude OAuth redirects
+- `MCP_ALLOW_LOCALHOST_REDIRECTS` - default `true` for local Claude OAuth redirects
 
 ### Security notes
 
@@ -119,6 +133,26 @@ Optional:
 - Refresh tokens are rotated on use; PKCE is verified before authorization codes are consumed.
 
 After deploy, point Spiky `VITE_MCP_URL` at the Railway MCP origin.
+
+## Directory listing (ops track)
+
+Custom connectors work today. Curated Claude / ChatGPT directories are a **separate review track** - not required for `/assistants` UI.
+
+Prep before submit:
+
+1. Stable production HTTPS MCP + Spiky consent origins (`MCP_PUBLIC_URL`, `AUTH_UI_PUBLIC_URL`, `VITE_MCP_URL`).
+2. Tool annotations on every tool (`title`, `readOnlyHint`, `destructiveHint`, `openWorldHint`) in `apps/mcp/src/tools/register.ts`.
+3. Public privacy policy, terms, support URL, logo / listing copy (frame as personal books/ingest - not money transfer).
+4. MFA-free reviewer demo account with sample ledger/wealth data.
+5. OpenAI: identity verification + `/.well-known/openai-apps-challenge` on the MCP (or parent) host.
+6. Claude: Team/Enterprise org with Directory submission access.
+
+References:
+
+- Claude: [Connectors directory submission](https://claude.com/docs/connectors/building/submission), [directory policy](https://support.claude.com/en/articles/13145358-anthropic-software-directory-policy)
+- OpenAI: [Submit plugins](https://developers.openai.com/plugins/deploy/submission)
+
+Keep in-app copy on **custom connector** until a listing is live.
 
 ## Spiky → apps/web later
 

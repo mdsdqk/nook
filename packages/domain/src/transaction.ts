@@ -57,7 +57,7 @@ export interface TransactionTypeMeta {
 
 export interface TransactionMetadata {
   merchant?: string;
-  /** Budgeting / reporting classification — free-form, not part of financial types. */
+  /** Budgeting / reporting classification - free-form, not part of financial types. */
   category?: string;
   notes?: string;
 }
@@ -138,7 +138,7 @@ export const TRANSACTION_TYPE_REGISTRY: Record<
   platform_fee: meta("Platform Fee", "fees", true, false),
 };
 
-/** UI hints for budgeting categories — not a closed domain union. */
+/** UI hints for budgeting categories - not a closed domain union. */
 export const SUGGESTED_CATEGORIES = [
   "Food",
   "Groceries",

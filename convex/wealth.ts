@@ -170,7 +170,7 @@ export type CreateManualInstrumentArgs = {
 
 /**
  * Create a mutual-fund instrument for manual wealth entry.
- * userId scoping is a temporary convenience — long-term instruments are shared catalog rows.
+ * userId scoping is a temporary convenience - long-term instruments are shared catalog rows.
  */
 export async function createManualInstrumentForUser(
   ctx: MutationCtx,
@@ -423,7 +423,7 @@ export const recordManualAssetTransaction = mutation({
   },
 });
 
-/** Optional link only — does not change holding math. */
+/** Optional link only - does not change holding math. */
 export const linkBankTransaction = mutation({
   args: {
     assetTransactionId: v.id("assetTransactions"),
@@ -480,7 +480,7 @@ export const listHoldings = query({
 });
 
 /**
- * Portfolio DTO — computation only, not a stored entity.
+ * Portfolio DTO - computation only, not a stored entity.
  * Liquid cash is read-only from Money accounts.
  */
 export async function computePortfolioForUser(

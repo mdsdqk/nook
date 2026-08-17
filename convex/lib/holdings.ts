@@ -43,7 +43,7 @@ function toDomainAssetTransaction(
 
 /**
  * Recompute the materialized holding for one (user, instrument, container).
- * Evidence never calls this — only mutations that write AssetTransactions.
+ * Evidence never calls this - only mutations that write AssetTransactions.
  */
 export async function recomputeHolding(
   ctx: MutationCtx,

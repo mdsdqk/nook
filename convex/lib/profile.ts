@@ -15,9 +15,9 @@ export type NormalizedProfileUpdate = {
 export function normalizeProfileUpdate(args: {
   name: string;
   /**
-   * `undefined` — leave username unchanged.
-   * `null` — clear username (allowed even if one was set; used for rollback).
-   * `string` — set or clear-via-empty (empty rejected when `usernameRequired`).
+   * `undefined` - leave username unchanged.
+   * `null` - clear username (allowed even if one was set; used for rollback).
+   * `string` - set or clear-via-empty (empty rejected when `usernameRequired`).
    */
   username?: string | null;
   /** When true, empty-string username is rejected (form “required when set”). */

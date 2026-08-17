@@ -18,7 +18,7 @@ export interface PortfolioAllocationSlice {
 }
 
 /**
- * Result of `computePortfolio` — a DTO, not a persisted domain entity.
+ * Result of `computePortfolio` - a DTO, not a persisted domain entity.
  */
 export interface PortfolioSummary {
   totalValue: number;
@@ -34,7 +34,7 @@ export interface PortfolioSummary {
 
 /**
  * Aggregate holdings + liquid Money balances into portfolio metrics.
- * Pure computation — same pattern as `computeNetWorth(accounts)`.
+ * Pure computation - same pattern as `computeNetWorth(accounts)`.
  */
 export function computePortfolio(
   holdings: Holding[],

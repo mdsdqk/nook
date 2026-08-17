@@ -5,9 +5,13 @@ import { AuthBusy } from "@/components/auth-busy";
 import { useAuth } from "@/lib/auth";
 import { authClient } from "@/lib/auth-client";
 import { sanitizeAppPath } from "@/lib/safe-path";
+import { resolveMcpUrl } from "@/lib/mcp-url";
+import {
+  isAllowedOauthRedirect,
+  isSafeOauthRedirectUri,
+} from "@/lib/oauth-redirect";
 
-const MCP_URL =
-  import.meta.env.VITE_MCP_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8787";
+const mcpResolved = resolveMcpUrl(import.meta.env.VITE_MCP_URL);
 
 type ConsentParams = {
   clientId: string;
@@ -68,6 +72,36 @@ export function OAuthConsentPage() {
     );
   }
 
+  if (!mcpResolved.ok) {
+    return (
+      <Shell>
+        <h1 className="text-headline-lg font-semibold text-white">
+          MCP not configured
+        </h1>
+        <p className="mt-2 text-body-sm text-error" role="alert">
+          {mcpResolved.reason}. Set{" "}
+          <code className="font-mono text-[0.9em]">VITE_MCP_URL</code> on Spiky
+          to the MCP origin.
+        </p>
+      </Shell>
+    );
+  }
+
+  const mcpOrigin = mcpResolved.origin;
+
+  if (!isSafeOauthRedirectUri(params.redirectUri)) {
+    return (
+      <Shell>
+        <h1 className="text-headline-lg font-semibold text-white">
+          Invalid redirect
+        </h1>
+        <p className="mt-2 text-body-sm text-error" role="alert">
+          redirect_uri must be https (or http localhost).
+        </p>
+      </Shell>
+    );
+  }
+
   if (isLoading) {
     return (
       <AuthBusy
@@ -119,7 +153,7 @@ export function OAuthConsentPage() {
       const sessionResult = await authClient.getSession();
       const sessionToken = sessionResult.data?.session?.token;
       if (!sessionToken) {
-        throw new Error("No session token available — sign in again");
+        throw new Error("No session token available - sign in again");
       }
 
       const body: Record<string, string> = {
@@ -134,7 +168,7 @@ export function OAuthConsentPage() {
       if (consent.scope) body.scope = consent.scope;
       if (consent.state) body.state = consent.state;
 
-      const res = await fetch(`${MCP_URL}/approve`, {
+      const res = await fetch(`${mcpOrigin}/approve`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -149,6 +183,9 @@ export function OAuthConsentPage() {
           data.error_description ?? data.error ?? `Approve failed (${res.status})`,
         );
       }
+      if (!isAllowedOauthRedirect(data.redirect_to, consent.redirectUri)) {
+        throw new Error("Approve returned an unexpected redirect");
+      }
       window.location.assign(data.redirect_to);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not approve");
@@ -157,6 +194,10 @@ export function OAuthConsentPage() {
   }
 
   function onDeny() {
+    if (!isSafeOauthRedirectUri(consent.redirectUri)) {
+      setError("Invalid redirect_uri");
+      return;
+    }
     const deny = new URL(consent.redirectUri);
     deny.searchParams.set("error", "access_denied");
     if (consent.state) deny.searchParams.set("state", consent.state);
@@ -175,13 +216,13 @@ export function OAuthConsentPage() {
         <span className="text-white">
           {consent.clientName ?? "An AI assistant"}
         </span>{" "}
-        wants access to your Nook ledger and wealth data as{" "}
+        wants access to your money in Nook as{" "}
         <span className="text-white">{displayName}</span>.
       </p>
 
       <ul className="mt-stack-md list-disc space-y-1 pl-5 text-body-sm text-on-surface/70">
         <li>Read accounts, transactions, cashflow, and portfolio</li>
-        <li>Ingest bank statements and Kuvera exports into your books</li>
+        <li>Add bank statements and investment exports to Nook</li>
         <li>Record manual wealth instruments and transactions</li>
       </ul>
 

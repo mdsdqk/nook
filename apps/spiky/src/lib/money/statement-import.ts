@@ -1,4 +1,4 @@
-/** Soft defaults — keep in sync with convex/lib/importPolicy DEFAULT_IMPORT_POLICY. */
+/** Soft defaults - keep in sync with convex/lib/importPolicy DEFAULT_IMPORT_POLICY. */
 export const DEFAULT_IMPORT_POLICY: ImportPolicy = {
   maxImportsPerHour: 5,
   maxFilesPerBatch: 5,

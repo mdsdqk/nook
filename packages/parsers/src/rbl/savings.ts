@@ -28,7 +28,7 @@ const TXN_LINE =
   /^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(\d{2}\/\d{2}\/\d{4})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*$/;
 const AMOUNT = /[\d,]+\.\d{2}/g;
 
-// Generated-at stamp + "N Page N of N" — date-prefixed so ^Page alone misses it.
+// Generated-at stamp + "N Page N of N" - date-prefixed so ^Page alone misses it.
 const PAGE_FOOTER =
   /\bPage\s+\d+\s+of\s+\d+\b/i;
 
@@ -140,7 +140,7 @@ export class RblSavingsParser implements StatementParser {
 
         if (!inHistory) continue;
 
-        // Page stamp — flush current so following wrap lines attach to the
+        // Page stamp - flush current so following wrap lines attach to the
         // next (older) row, not the previous one. Stay in history.
         if (PAGE_FOOTER.test(trimmed)) {
           if (current) {

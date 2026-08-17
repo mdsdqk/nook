@@ -7,6 +7,7 @@ import {
   PieChart,
   CreditCard,
   Sparkles,
+  Bot,
   Settings,
   LogOut,
   type LucideIcon,
@@ -26,6 +27,7 @@ export type ShellNavItem = {
 export const shellNavItems: ShellNavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Money", to: "/money", icon: Wallet },
+  { label: "Assistants", to: "/assistants", icon: Bot, badge: "MCP" },
   { label: "Wealth", icon: PieChart },
   { label: "Debt", icon: CreditCard },
   { label: "Intelligence", icon: Sparkles, badge: "AI" },
@@ -194,7 +196,7 @@ export function ShellUserFooter({
     setUserMenuOpen(false);
     onNavigate?.();
     // Navigate immediately; RequireAuth also redirects once the session
-    // clears. Don't wait on signOut — that left /dashboard mounted until
+    // clears. Don't wait on signOut - that left /dashboard mounted until
     // Convex reconnect finished and made the login screen flash/reload.
     void logout();
     navigate("/login", { replace: true });
